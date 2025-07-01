@@ -1,5 +1,5 @@
 "use client";
-import { initializeVideoStream } from "@/lib/bola";
+import { initializeVideoStream } from "@/lib/player";
 import { useEffect, useRef, useState, use } from "react";
 import {
 	getMainManifest,
@@ -13,12 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import CustomDropdown from "@/components/singleComponents/CustomDropdown";
 import { Icon } from "@iconify/react";
 
 export default function VideoPage({ params }) {
@@ -35,7 +30,10 @@ export default function VideoPage({ params }) {
 	const [volume, setVolume] = useState(100);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [duration, setDuration] = useState(0);
-	const [buffered, setBuffered] = useState(0);
+	const [bufferInfo, setBufferInfo] = useState({
+		bufferedTime: 0,
+		bufferedPercentage: 0,
+	});
 	const [isFullscreen, setIsFullscreen] = useState(false);
 	const [showControls, setShowControls] = useState(true);
 	const [playbackRate, setPlaybackRate] = useState(1);
@@ -54,7 +52,6 @@ export default function VideoPage({ params }) {
 				setVideoData(video);
 				console.log("Video data fetched:", video);
 				document.title = video.title || "Seenema Video Player";
-				videoRef.duration = video.duration || 0;
 			} catch (err) {
 				console.error("Error fetching video data:", err);
 			}
@@ -101,7 +98,12 @@ export default function VideoPage({ params }) {
 	}, [resolution, videoId]);
 
 	useEffect(() => {
-		if (videoRef.current && Object.keys(segmentList).length > 0) {
+		if (
+			videoRef.current &&
+			Object.keys(segmentList).length > 0 &&
+			resolution &&
+			videoData?.duration
+		) {
 			console.log("Initializing video stream with segments:", resolutionList);
 			const startStream = async () => {
 				setIsLoading(true);
@@ -110,7 +112,7 @@ export default function VideoPage({ params }) {
 					videoId,
 					segmentList,
 					resolutionList,
-					videoData.duration + 7 || 0,
+					videoData.duration + 7, // or just videoData.duration
 				).catch((err) => {
 					console.error("Error initializing video stream:", err);
 				});
@@ -118,55 +120,98 @@ export default function VideoPage({ params }) {
 			};
 			startStream();
 		}
-	}, [segmentList, videoId, resolution, resolutionList]);
+	}, [segmentList, videoId, resolution, resolutionList, videoData.duration]);
 
-	// Video event handlers
 	useEffect(() => {
-		const video = videoRef.current;
-		if (!video) return;
-
-		const updateTime = () => setCurrentTime(video.currentTime);
-		const updateDuration = () => setDuration(video.duration);
-		const updateBuffered = () => {
-			if (video.buffered.length > 0) {
-				setBuffered(video.buffered.end(video.buffered.length - 1));
+		const handleKeyDown = (e) => {
+			// Prevent shortcuts when typing in an input/textarea
+			if (
+				document.activeElement.tagName === "INPUT" ||
+				document.activeElement.tagName === "TEXTAREA" ||
+				document.activeElement.isContentEditable
+			) {
+				return;
+			}
+			switch (e.key.toLowerCase()) {
+				case " ":
+				case "k":
+					e.preventDefault();
+					togglePlayPause();
+					break;
+				case "m":
+					toggleMute();
+					break;
+				case "arrowright":
+					skipTime(5);
+					break;
+				case "arrowleft":
+					skipTime(-5);
+					break;
+				case "arrowup":
+					handleVolumeChange([Math.min(volume + 10, 100)]);
+					break;
+				case "arrowdown":
+					handleVolumeChange([Math.max(volume - 10, 0)]);
+					break;
+				case "f":
+					toggleFullscreen();
+					break;
+				case ">":
+					handlePlaybackRateChange(Math.min(playbackRate + 0.25, 2));
+					break;
+				case "<":
+					handlePlaybackRateChange(Math.max(playbackRate - 0.25, 0.25));
+					break;
+				default:
+					break;
 			}
 		};
-		const handlePlay = () => setIsPlaying(true);
-		const handlePause = () => setIsPlaying(false);
-		const handleVolumeChange = () => {
-			setVolume(video.volume * 100);
-			setIsMuted(video.muted);
-		};
-		const handleLoadedData = () => {
-			console.log("Video loaded");
-			setIsLoading(false);
-		};
-		const handleCanPlay = () => setIsLoading(false);
-		const handleWaiting = () => setIsLoading(true);
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [
+		isPlaying,
+		isMuted,
+		volume,
+		playbackRate,
+		showControls,
+		resolution,
+		currentTime,
+	]);
 
-		video.addEventListener("timeupdate", updateTime);
-		video.addEventListener("durationchange", updateDuration);
-		video.addEventListener("progress", updateBuffered);
-		video.addEventListener("play", handlePlay);
-		video.addEventListener("pause", handlePause);
-		video.addEventListener("volumechange", handleVolumeChange);
-		video.addEventListener("loadeddata", handleLoadedData);
-		video.addEventListener("canplay", handleCanPlay);
-		video.addEventListener("waiting", handleWaiting);
+	const updateBufferInfo = () => {
+		const video = videoRef.current;
+		if (!video || !video.buffered || !video.buffered.length || !duration) {
+			setBufferInfo({ bufferedTime: 0, bufferedPercentage: 0 });
+			return;
+		}
 
-		return () => {
-			video.removeEventListener("timeupdate", updateTime);
-			video.removeEventListener("durationchange", updateDuration);
-			video.removeEventListener("progress", updateBuffered);
-			video.removeEventListener("play", handlePlay);
-			video.removeEventListener("pause", handlePause);
-			video.removeEventListener("volumechange", handleVolumeChange);
-			video.removeEventListener("loadeddata", handleLoadedData);
-			video.removeEventListener("canplay", handleCanPlay);
-			video.removeEventListener("waiting", handleWaiting);
-		};
-	}, []);
+		let maxBufferedEnd = 0;
+		const currentTime = video.currentTime;
+
+		for (let i = 0; i < video.buffered.length; i++) {
+			const start = video.buffered.start(i);
+			const end = video.buffered.end(i);
+
+			// Check if this range contains or is ahead of current time
+			if (currentTime >= start && currentTime <= end) {
+				maxBufferedEnd = end;
+				break;
+			}
+		}
+
+		const bufferedTime = Math.max(0, maxBufferedEnd - currentTime);
+		const bufferedPercentage = Math.min(
+			((currentTime + bufferedTime) / duration) * 100,
+			100,
+		);
+
+		setBufferInfo({
+			bufferedTime,
+			bufferedPercentage,
+		});
+	};
+
+	const seekedSegment = () => {};
 
 	// Control functions
 	const togglePlayPause = () => {
@@ -200,7 +245,11 @@ export default function VideoPage({ params }) {
 	const handleSeek = (newTime) => {
 		const video = videoRef.current;
 		if (!video) return;
-		video.currentTime = newTime[0];
+		const newTimeValue = newTime[0];
+		if (newTimeValue < 0 || newTimeValue > video.duration) return;
+		video.currentTime = newTimeValue;
+		setCurrentTime(newTimeValue);
+		resetControlsTimeout();
 	};
 
 	const toggleFullscreen = () => {
@@ -237,7 +286,7 @@ export default function VideoPage({ params }) {
 		}
 		controlsTimeout.current = setTimeout(() => {
 			if (isPlaying) setShowControls(false);
-		}, 3000);
+		}, 5000);
 	};
 
 	const formatTime = (time) => {
@@ -247,21 +296,48 @@ export default function VideoPage({ params }) {
 		return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 	};
 
-	const progressPercentage = duration ? (currentTime / duration) * 100 : 0;
-	const bufferedPercentage = duration ? (buffered / duration) * 100 : 0;
+	// Calculate progress percentage
+	const progressPercentage = duration
+		? Math.min((currentTime / duration) * 100, 100)
+		: 0;
 
 	return (
 		<div
 			className="fixed inset-0 w-screen h-screen bg-black"
 			onMouseMove={resetControlsTimeout}
 			onMouseLeave={() => isPlaying && setShowControls(false)}>
-			{/* Video Element */}
+			{/* Video Element - Fixed duplicate handlers */}
 			<video
 				ref={videoRef}
 				id="video"
 				autoPlay
 				muted
 				className="w-full h-full object-cover"
+				onTimeUpdate={() => {
+					const video = videoRef.current;
+					if (video) {
+						setCurrentTime(video.currentTime);
+						updateBufferInfo();
+					}
+				}}
+				onDurationChange={() => setDuration(videoRef.current?.duration || 0)}
+				onProgress={updateBufferInfo}
+				onPlay={() => setIsPlaying(true)}
+				onPause={() => setIsPlaying(false)}
+				onVolumeChange={() => {
+					const video = videoRef.current;
+					setVolume((video?.volume || 0) * 100);
+					setIsMuted(video?.muted ?? true);
+				}}
+				onLoadedData={() => {
+					setIsLoading(false);
+					updateBufferInfo();
+				}}
+				onCanPlay={() => {
+					setIsLoading(false);
+					updateBufferInfo();
+				}}
+				onWaiting={() => setIsLoading(true)}
 				onError={(e) => console.error("Video error", e.target.error)}
 			/>
 
@@ -270,7 +346,6 @@ export default function VideoPage({ params }) {
 				<div className="absolute inset-0 flex items-center justify-center bg-black/50">
 					<div className="text-center">
 						<div className="spinner w-12 h-12 mx-auto mb-4"></div>
-						<p className="text-foreground">Loading...</p>
 					</div>
 				</div>
 			)}
@@ -294,20 +369,30 @@ export default function VideoPage({ params }) {
 				{/* Progress Bar */}
 				<div className="px-4 pb-2">
 					<div className="relative">
-						{/* Buffer Progress */}
+						{/* Buffer Progress (behind current progress) */}
 						<div className="absolute top-1/2 transform -translate-y-1/2 w-full h-1 bg-white/20 rounded-full">
 							<div
-								className="h-full bg-white/40 rounded-full transition-all duration-300"
-								style={{ width: `${bufferedPercentage}%` }}
+								className="h-full bg-white rounded-full transition-all duration-300"
+								style={{
+									width: `${Math.min(bufferInfo.bufferedPercentage, 100)}%`,
+									opacity: 0.6,
+								}}
+							/>
+						</div>
+						{/* Current Progress (on top) */}
+						<div className="absolute top-1/2 transform -translate-y-1/2 w-full h-1 bg-white/20 rounded-full">
+							<div
+								className="h-full  rounded-full transition-all duration-100"
+								style={{ width: `${Math.min(progressPercentage, 100)}%` }}
 							/>
 						</div>
 						{/* Seek Slider */}
 						<Slider
 							value={[currentTime]}
-							max={videoData.duration + 7 || 100}
+							max={duration + 7 || 100}
 							step={0.1}
 							onValueChange={handleSeek}
-							className="w-full cursor-pointer"
+							className="w-full cursor-pointer relative z-10"
 						/>
 					</div>
 				</div>
@@ -391,56 +476,21 @@ export default function VideoPage({ params }) {
 					{/* Right Controls */}
 					<div className="flex items-center space-x-3">
 						{/* Playback Speed */}
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button
-									variant="ghost"
-									size="sm"
-									className="text-white hover:text-primary hover:bg-white/10">
-									<span className="text-sm">{playbackRate}x</span>
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent className="bg-card border-border">
-								{[0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((rate) => (
-									<DropdownMenuItem
-										key={rate}
-										onClick={() => handlePlaybackRateChange(rate)}
-										className="cursor-pointer hover:bg-accent">
-										{rate}x {rate === 1 && "(Normal)"}
-									</DropdownMenuItem>
-								))}
-							</DropdownMenuContent>
-						</DropdownMenu>
+						<CustomDropdown
+							options={[0.5, 1, 1.5, 2]}
+							selectedOption={playbackRate + "X"}
+							onSelect={handlePlaybackRateChange}
+						/>
 
 						{/* Quality Selector */}
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button
-									variant="ghost"
-									size="sm"
-									className="text-white hover:text-primary hover:bg-white/10">
-									<Icon icon="solar:settings-bold" className="w-5 h-5" />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent className="bg-card border-border">
-								{resolutionList.map((res) => (
-									<DropdownMenuItem
-										key={res}
-										onClick={() => setResolution(res)}
-										className="cursor-pointer hover:bg-accent">
-										<div className="flex items-center justify-between w-full">
-											<span>{res}p</span>
-											{resolution === res && (
-												<Icon
-													icon="solar:check-circle-bold"
-													className="w-4 h-4 text-primary"
-												/>
-											)}
-										</div>
-									</DropdownMenuItem>
-								))}
-							</DropdownMenuContent>
-						</DropdownMenu>
+						<CustomDropdown
+							options={resolutionList}
+							selectedOption={resolution}
+							onSelect={(res) => {
+								setResolution(res);
+								setSegmentList({});
+							}}
+						/>
 
 						{/* Picture in Picture */}
 						<Button
@@ -473,38 +523,15 @@ export default function VideoPage({ params }) {
 			{/* Video Info Overlay */}
 			{videoData.title && showControls && (
 				<div className="absolute top-4 left-4 right-4 w-max">
-					<div className="bg-black/30 rounded-lg p-4 backdrop-blur-sm">
-						<h1 className="text-white text-xl font-bold mb-2">
+					<div className="bg-black/30 rounded-lg p-2 backdrop-blur-sm">
+						<h1 className="text-white text-xl font-bold mb-0">
 							{videoData.title}
+							{videoData.created_at && (
+								<span className="text-white/70 text-lg font-normal ml-2">
+									({videoData.created_at.split("T")[0].split("-")[0]})
+								</span>
+							)}
 						</h1>
-						{videoData.description && (
-							<p className="text-white/80 text-sm line-clamp-2">
-								{videoData.description}
-							</p>
-						)}
-						<div className="flex items-center space-x-4 mt-2">
-							{videoData.year && (
-								<Badge
-									variant="outline"
-									className="border-primary text-primary">
-									{videoData.year}
-								</Badge>
-							)}
-							{videoData.genre && (
-								<Badge variant="outline" className="border-white/20 text-white">
-									{videoData.genre}
-								</Badge>
-							)}
-							{videoData.rating && (
-								<div className="flex items-center space-x-1">
-									<Icon
-										icon="solar:star-bold"
-										className="w-4 h-4 text-primary"
-									/>
-									<span className="text-white text-sm">{videoData.rating}</span>
-								</div>
-							)}
-						</div>
 					</div>
 				</div>
 			)}

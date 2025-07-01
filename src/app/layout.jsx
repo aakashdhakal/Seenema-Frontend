@@ -1,6 +1,9 @@
 import { Geist, Geist_Mono, Nunito } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/combinedComponents/Navbar";
+import { SWRConfig } from "swr";
+import { AuthProvider } from "@/context/AuthContext";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -25,11 +28,27 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
 	return (
-		<html lang="en">
+		<html lang="en" suppressHydrationWarning>
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} antialiased`}>
-				{/* <Navbar /> */}
-				{children}
+				<ThemeProvider
+					attribute="class"
+					defaultTheme="dark"
+					enableSystem={false}
+					disableTransitionOnChange>
+					<SWRConfig
+						value={{
+							revalidateOnFocus: false,
+							revalidateOnReconnect: false,
+							dedupingInterval: 300000, // 5 minutes
+							focusThrottleInterval: 3600000, // 1 hour
+						}}>
+						<AuthProvider>
+							{/* <Navbar /> */}
+							{children}
+						</AuthProvider>
+					</SWRConfig>
+				</ThemeProvider>
 			</body>
 		</html>
 	);

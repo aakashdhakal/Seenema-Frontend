@@ -8,6 +8,14 @@ const nextConfig = {
 			},
 		];
 	},
+	images: {
+		domains: [
+			"localhost",
+			"image.tmdb.org",
+			"www.themoviedb.org",
+			"i.imgur.com",
+		],
+	},
 };
 
 export default nextConfig;

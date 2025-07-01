@@ -13,7 +13,7 @@ function Separator({
 }) {
   return (
     (<SeparatorPrimitive.Root
-      data-slot="separator-root"
+      data-slot="separator"
       decorative={decorative}
       orientation={orientation}
       className={cn(

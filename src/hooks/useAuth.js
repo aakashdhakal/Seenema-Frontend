@@ -1,82 +1,76 @@
 "use client";
 import useSWR from "swr";
+import axios from "@/lib/axios"; // your globally pre-configured axiosClient
 
-// Fetcher for SWR
-const fetcher = (...args) =>
-	fetch(...args, { credentials: "include" }).then((res) => {
-		if (!res.ok) throw new Error("Not authenticated");
-		return res.json();
-	});
+// SWR fetcher using global axios
+const fetcher = (url) => axios.get(url).then((res) => res.data);
 
-// Helper to get CSRF cookie (must be called before login/register/logout)
-const getCSRFToken = async () => {
-	await fetch("http://localhost:8000/sanctum/csrf-cookie", {
-		credentials: "include",
-	});
+// Helper to call /sanctum/csrf-cookie (CSRF token gets auto-handled by axios)
+export const getCSRFToken = async () => {
+	await axios.get("/sanctum/csrf-cookie");
 };
 
 export const useAuth = () => {
-	const {
-		data: user,
-		error,
-		isLoading,
-		mutate,
-	} = useSWR("http://localhost:8000/api/user", fetcher);
+	const { data: user, error, isLoading, mutate } = useSWR("/api/user", fetcher);
 
-	// Login function
 	const login = async ({ email, password }) => {
-		await getCSRFToken();
+		await getCSRFToken(); // this triggers Laravel to send back CSRF token in cookie
 
-		const res = await fetch("http://localhost:8000/login", {
-			method: "POST",
-			credentials: "include",
-			headers: {
-				"Content-Type": "application/json",
-				Accept: "application/json",
-			},
-			body: JSON.stringify({ email, password }),
-		});
-
-		if (!res.ok) {
-			const err = await res.json();
-			throw new Error(err.message || "Login failed");
+		try {
+			await axios.post("/login", { email, password });
+			await mutate(); // refresh user
+		} catch (err) {
+			throw new Error(err.response?.data?.message || "Login failed");
 		}
-
-		await mutate(); // Refresh the user
 	};
 
-	// Logout function
 	const logout = async () => {
 		await getCSRFToken();
 
-		await fetch("http://localhost:8000/logout", {
-			method: "POST",
-			credentials: "include",
-		});
-
-		await mutate(null); // Clear user data
+		try {
+			if (user) await axios.post("/logout");
+			await mutate(null);
+		} catch (err) {
+			throw new Error(err.response?.data?.message || "Logout failed");
+		}
 	};
 
-	// Register function (optional)
-	const register = async ({ name, email, password }) => {
+	const isEmailVerified = () => {
+		return user?.email_verified_at !== null;
+	};
+
+	const sendVerificationEmail = async () => {
 		await getCSRFToken();
 
-		const res = await fetch("http://localhost:8000/register", {
-			method: "POST",
-			credentials: "include",
-			headers: {
-				"Content-Type": "application/json",
-				Accept: "application/json",
-			},
-			body: JSON.stringify({ name, email, password }),
-		});
-
-		if (!res.ok) {
-			const err = await res.json();
-			throw new Error(err.message || "Registration failed");
+		try {
+			const res = await axios.post("/api/email/verification-notification");
+			if (res.status === 200) {
+				return res.data;
+			} else {
+				throw new Error("Failed to send verification email");
+			}
+		} catch (err) {
+			throw new Error(
+				err.response?.data?.message || "Failed to resend verification email",
+			);
 		}
+	};
 
-		await mutate(); // User should be logged in right after register
+	const registerUser = async ({ name, email, password, confirmPassword }) => {
+		await getCSRFToken();
+
+		try {
+			const res = await axios.post("/register", {
+				name,
+				email,
+				password,
+				password_confirmation: confirmPassword,
+			});
+			await mutate(); // refresh user
+			return res;
+		} catch (err) {
+			throw new Error(err.response?.data?.message || "Registration failed");
+		}
 	};
 
 	return {
@@ -86,7 +80,9 @@ export const useAuth = () => {
 		isLoggedIn: !!user,
 		login,
 		logout,
-		register,
+		registerUser,
 		mutate,
+		isEmailVerified,
+		sendVerificationEmail,
 	};
 };

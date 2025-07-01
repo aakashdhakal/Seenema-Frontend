@@ -201,3 +201,29 @@ export async function getIntroManifest(resolution) {
 		return null;
 	}
 }
+
+// ONLY THIS FUNCTION NEEDS TO BE CHANGED
+export function calculateUtility(segmentSizes, resolutionList) {
+	// FIX: Pass segmentSizes to calculateMinSegmentSize
+	const S_min = calculateMinSegmentSize(segmentSizes);
+
+	const utility = [];
+	resolutionList.forEach((res) => {
+		const S_m = segmentSizes[res];
+		if (S_m > 0 && S_min > 0) {
+			const utilityValue = Math.log(S_m / S_min);
+			utility.push(utilityValue);
+		} else {
+			utility.push(0); // If size is 0 or S_min is 0, utility is 0
+		}
+	});
+	return utility;
+}
+
+export function calculateMinSegmentSize(sizes) {
+	const validSizes = Object.values(sizes).filter((size) => size > 0);
+	if (validSizes.length === 0) {
+		return 1; // Prevent division by zero if all sizes are zero, use a small positive number
+	}
+	return Math.min(...validSizes);
+}
