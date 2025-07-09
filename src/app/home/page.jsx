@@ -3,7 +3,6 @@
 import { useAuthContext } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useTheme } from "next-themes";
 import PageLoadingComponent from "@/components/combinedComponents/PageLoadingComponent";
 import Navbar from "@/components/combinedComponents/Navbar";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ export default function HomePage() {
 	const router = useRouter();
 	const [userData, setUserData] = useState(null);
 	const [mounted, setMounted] = useState(false);
-	const { theme } = useTheme();
 
 	// Handle hydration
 	useEffect(() => {
@@ -267,12 +265,7 @@ export default function HomePage() {
 	];
 
 	return (
-		<div
-			className={`min-h-screen transition-colors duration-300 ${
-				theme === "dark"
-					? "bg-gradient-to-br from-slate-950 via-slate-900 to-green-950"
-					: "bg-gradient-to-br from-gray-50 via-white to-green-50"
-			}`}>
+		<div className="min-h-screen bg-background">
 			<Navbar />
 
 			{/* Featured Hero Section */}
@@ -280,20 +273,8 @@ export default function HomePage() {
 				<div
 					className="absolute inset-0 bg-cover bg-center bg-no-repeat"
 					style={{ backgroundImage: `url(${featuredMovie.backdrop})` }}>
-					<div
-						className={`absolute inset-0 transition-colors duration-300 ${
-							theme === "dark"
-								? "bg-gradient-to-r from-slate-950/90 via-slate-900/70 to-transparent"
-								: "bg-gradient-to-r from-white/90 via-gray-100/70 to-transparent"
-						}`}
-					/>
-					<div
-						className={`absolute inset-0 transition-colors duration-300 ${
-							theme === "dark"
-								? "bg-gradient-to-t from-slate-950 via-transparent to-transparent"
-								: "bg-gradient-to-t from-white via-transparent to-transparent"
-						}`}
-					/>
+					<div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-transparent" />
+					<div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
 				</div>
 
 				{/* Decorative Elements */}
@@ -304,35 +285,21 @@ export default function HomePage() {
 					<div className="container mx-auto px-6">
 						<div className="max-w-3xl">
 							{/* Status Badge */}
-							<Badge className="mb-6 bg-gradient-to-r from-primary to-green-600 hover:from-primary/90 hover:to-green-600/90 text-white border-none px-4 py-2 text-sm shadow-lg">
+							<Badge className="mb-6 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground border-none px-4 py-2 text-sm shadow-lg">
 								<Icon icon="solar:fire-bold-duotone" className="w-4 h-4 mr-2" />
 								#1 Trending Today
 							</Badge>
 
 							{/* Title */}
-							<h1
-								className={`text-6xl md:text-8xl font-bold mb-8 leading-tight transition-colors duration-300 ${
-									theme === "dark" ? "text-white" : "text-gray-900"
-								}`}>
-								<span
-									className={`bg-gradient-to-r bg-clip-text text-transparent transition-colors duration-300 ${
-										theme === "dark"
-											? "from-white via-green-100 to-primary"
-											: "from-gray-900 via-green-700 to-primary"
-									}`}>
+							<h1 className="text-6xl md:text-8xl font-bold mb-8 leading-tight text-foreground">
+								<span className="bg-gradient-to-r bg-clip-text text-transparent from-foreground via-primary/90 to-primary">
 									{featuredMovie.title}
 								</span>
 							</h1>
 
 							{/* Metadata */}
-							<div
-								className={`flex items-center gap-6 mb-8 transition-colors duration-300 ${
-									theme === "dark" ? "text-white/90" : "text-gray-700"
-								}`}>
-								<div
-									className={`flex items-center gap-2 backdrop-blur-sm px-3 py-1 rounded-full transition-colors duration-300 ${
-										theme === "dark" ? "bg-white/10" : "bg-black/10"
-									}`}>
+							<div className="flex items-center gap-6 mb-8 text-foreground/90">
+								<div className="flex items-center gap-2 backdrop-blur-sm px-3 py-1 rounded-full bg-foreground/10">
 									<Icon
 										icon="solar:star-bold-duotone"
 										className="w-5 h-5 text-yellow-400"
@@ -349,10 +316,7 @@ export default function HomePage() {
 							</div>
 
 							{/* Description */}
-							<p
-								className={`text-xl mb-10 leading-relaxed max-w-2xl font-light transition-colors duration-300 ${
-									theme === "dark" ? "text-white/90" : "text-gray-700"
-								}`}>
+							<p className="text-xl mb-10 leading-relaxed max-w-2xl font-light text-foreground/80">
 								{featuredMovie.description}
 							</p>
 
@@ -360,7 +324,7 @@ export default function HomePage() {
 							<div className="flex flex-col sm:flex-row gap-4">
 								<Button
 									size="lg"
-									className="bg-gradient-to-r from-primary to-green-600 hover:from-primary/90 hover:to-green-600/90 text-white px-10 py-6 text-lg font-semibold shadow-lg transition-all duration-300"
+									className="bg-primary hover:bg-primary/90 text-primary-foreground px-10 py-6 text-lg font-semibold shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-primary/25"
 									onClick={() => router.push("/watch/stranger-things")}>
 									<Icon icon="solar:play-bold" className="w-7 h-7 mr-3" />
 									Play Now
@@ -368,11 +332,7 @@ export default function HomePage() {
 								<Button
 									variant="outline"
 									size="lg"
-									className={`backdrop-blur-sm px-10 py-6 text-lg transition-all duration-300 ${
-										theme === "dark"
-											? "border-white/30 text-white hover:bg-white/10 hover:border-white/50"
-											: "border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400"
-									}`}
+									className="backdrop-blur-sm px-10 py-6 text-lg border-border text-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-300"
 									onClick={() => router.push("/info/stranger-things")}>
 									<Icon
 										icon="solar:info-circle-bold-duotone"
@@ -383,11 +343,7 @@ export default function HomePage() {
 								<Button
 									variant="ghost"
 									size="lg"
-									className={`px-6 py-6 text-lg transition-all duration-300 ${
-										theme === "dark"
-											? "text-white hover:bg-white/10"
-											: "text-gray-700 hover:bg-gray-100"
-									}`}>
+									className="px-6 py-6 text-lg text-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-300">
 									<Icon
 										icon="solar:bookmark-circle-bold-duotone"
 										className="w-7 h-7 mr-3"
@@ -400,12 +356,7 @@ export default function HomePage() {
 				</div>
 
 				{/* Bottom fade gradient */}
-				<div
-					className={`absolute bottom-0 left-0 right-0 h-32 transition-colors duration-300 ${
-						theme === "dark"
-							? "bg-gradient-to-t from-slate-950 to-transparent"
-							: "bg-gradient-to-t from-white to-transparent"
-					}`}></div>
+				<div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent"></div>
 			</section>
 
 			{/* Movie Rows */}
@@ -415,12 +366,9 @@ export default function HomePage() {
 						<div className="container mx-auto px-6">
 							{/* Row Header */}
 							<div className="flex items-center justify-between mb-8">
-								<h2
-									className={`text-3xl font-bold flex items-center gap-4 transition-colors duration-300 ${
-										theme === "dark" ? "text-white" : "text-gray-900"
-									}`}>
+								<h2 className="text-3xl font-bold flex items-center gap-4 text-foreground">
 									{row.title}
-									<div className="w-12 h-1 bg-gradient-to-r from-primary to-green-600 rounded-full"></div>
+									<div className="w-12 h-1 bg-gradient-to-r from-primary to-primary/60 rounded-full"></div>
 								</h2>
 								<Button
 									variant="ghost"
@@ -454,12 +402,9 @@ export default function HomePage() {
 			{/* Continue Watching */}
 			<section className="container mx-auto px-6 py-16">
 				<div className="flex items-center justify-between mb-8">
-					<h2
-						className={`text-3xl font-bold flex items-center gap-4 transition-colors duration-300 ${
-							theme === "dark" ? "text-white" : "text-gray-900"
-						}`}>
+					<h2 className="text-3xl font-bold flex items-center gap-4 text-foreground">
 						Continue Watching for {userData?.name}
-						<div className="w-12 h-1 bg-gradient-to-r from-primary to-green-600 rounded-full"></div>
+						<div className="w-12 h-1 bg-gradient-to-r from-primary to-primary/60 rounded-full"></div>
 					</h2>
 				</div>
 
@@ -502,6 +447,56 @@ export default function HomePage() {
 							onClick={() => router.push(`/watch/${item.title.toLowerCase()}`)}
 						/>
 					))}
+				</div>
+			</section>
+
+			{/* Additional Features Section */}
+			<section className="container mx-auto px-6 py-16 border-t border-border">
+				<div className="grid md:grid-cols-3 gap-8">
+					<div className="text-center p-8 rounded-xl bg-card hover:bg-card/80 transition-colors duration-300">
+						<div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+							<Icon
+								icon="solar:monitor-smartphone-bold-duotone"
+								className="w-8 h-8 text-primary"
+							/>
+						</div>
+						<h3 className="text-xl font-semibold mb-3 text-card-foreground">
+							Watch Anywhere
+						</h3>
+						<p className="text-muted-foreground">
+							Stream on your TV, laptop, phone, and tablet
+						</p>
+					</div>
+
+					<div className="text-center p-8 rounded-xl bg-card hover:bg-card/80 transition-colors duration-300">
+						<div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+							<Icon
+								icon="solar:download-bold-duotone"
+								className="w-8 h-8 text-primary"
+							/>
+						</div>
+						<h3 className="text-xl font-semibold mb-3 text-card-foreground">
+							Download & Go
+						</h3>
+						<p className="text-muted-foreground">
+							Download titles to watch offline anytime
+						</p>
+					</div>
+
+					<div className="text-center p-8 rounded-xl bg-card hover:bg-card/80 transition-colors duration-300">
+						<div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+							<Icon
+								icon="solar:users-group-rounded-bold-duotone"
+								className="w-8 h-8 text-primary"
+							/>
+						</div>
+						<h3 className="text-xl font-semibold mb-3 text-card-foreground">
+							Family Profiles
+						</h3>
+						<p className="text-muted-foreground">
+							Create profiles for kids with age-appropriate content
+						</p>
+					</div>
 				</div>
 			</section>
 		</div>

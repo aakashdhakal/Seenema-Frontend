@@ -2,19 +2,20 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import UserAvatar from "../singleComponents/UserAvatar";
 import Image from "next/image";
-import { useTheme } from "next-themes";
+import { useAuthContext } from "@/context/AuthContext";
 
 export default function Navbar() {
 	const [isScrolled, setIsScrolled] = useState(false);
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const [mounted, setMounted] = useState(false);
 	const pathname = usePathname();
-	const { theme, setTheme } = useTheme();
+	const { logout, user, loading } = useAuthContext();
 
 	// Handle hydration
 	useEffect(() => {
@@ -54,12 +55,8 @@ export default function Navbar() {
 		<header
 			className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
 				isScrolled
-					? theme === "dark"
-						? "bg-slate-950/95 backdrop-blur-md shadow-lg border-b border-slate-800"
-						: "bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200"
-					: theme === "dark"
-					? "bg-gradient-to-b from-slate-950/80 to-transparent"
-					: "bg-gradient-to-b from-white/80 to-transparent"
+					? "bg-background/95 backdrop-blur-md shadow-lg border-b border-border"
+					: "bg-gradient-to-b from-background/80 to-transparent"
 			}`}>
 			<div className="container mx-auto px-4 sm:px-6 lg:px-8">
 				<nav className="flex items-center justify-between h-20">
@@ -82,18 +79,12 @@ export default function Navbar() {
 									className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 group ${
 										isActive
 											? "text-primary bg-primary/10"
-											: theme === "dark"
-											? "text-slate-300 hover:text-white hover:bg-slate-800/50"
-											: "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+											: "text-foreground/80 hover:text-foreground hover:bg-accent"
 									}`}>
 									<Icon
 										icon={link.icon}
 										className={`w-4 h-4 transition-transform group-hover:scale-110 ${
-											isActive
-												? "text-primary"
-												: theme === "dark"
-												? "text-slate-300"
-												: "text-gray-600"
+											isActive ? "text-primary" : "text-foreground/80"
 										}`}
 									/>
 									<span className="text-sm font-medium">{link.label}</span>
@@ -104,36 +95,11 @@ export default function Navbar() {
 
 					{/* Right Side: Search, Notifications, Profile */}
 					<div className="flex items-center space-x-3">
-						{/* Theme Toggle Button */}
-						<Button
-							variant="ghost"
-							size="icon"
-							className={`transition-colors ${
-								theme === "dark"
-									? "text-slate-300 hover:text-white hover:bg-slate-800/50"
-									: "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-							}`}
-							onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-							<Icon
-								icon={
-									theme === "dark"
-										? "solar:sun-bold-duotone"
-										: "solar:moon-bold-duotone"
-								}
-								className="w-5 h-5"
-							/>
-							<span className="sr-only">Toggle Theme</span>
-						</Button>
-
 						{/* Search Button */}
 						<Button
 							variant="ghost"
 							size="icon"
-							className={`transition-colors ${
-								theme === "dark"
-									? "text-slate-300 hover:text-white hover:bg-slate-800/50"
-									: "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-							}`}>
+							className="text-foreground/80 hover:text-foreground hover:bg-accent transition-colors">
 							<Icon icon="solar:magnifer-bold-duotone" className="w-5 h-5" />
 							<span className="sr-only">Search</span>
 						</Button>
@@ -142,48 +108,38 @@ export default function Navbar() {
 						<Button
 							variant="ghost"
 							size="icon"
-							className={`transition-colors relative ${
-								theme === "dark"
-									? "text-slate-300 hover:text-white hover:bg-slate-800/50"
-									: "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-							}`}>
+							className="text-foreground/80 hover:text-foreground hover:bg-accent transition-colors relative">
 							<Icon icon="solar:bell-bold-duotone" className="w-5 h-5" />
 							{/* Notification dot */}
-							<div
-								className={`absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 ${
-									theme === "dark" ? "border-slate-950" : "border-white"
-								}`}></div>
+							<div className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full border-2 border-background"></div>
 							<span className="sr-only">Notifications</span>
 						</Button>
 
-						{/* User Avatar */}
-						<UserAvatar src="https://avatar.iran.liara.run/public" />
+						{/* logout btn */}
 						<Button
 							variant="ghost"
 							size="icon"
-							className={`transition-colors relative ${
-								theme === "dark"
-									? "text-slate-300 hover:text-white hover:bg-slate-800/50"
-									: "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-							}`}>
-							<Icon icon="solar:bell-bold-duotone" className="w-5 h-5" />
-							{/* Notification dot */}
-							<div
-								className={`absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 ${
-									theme === "dark" ? "border-slate-950" : "border-white"
-								}`}></div>
-							<span className="sr-only">Notifications</span>
+							onClick={() => logout()}
+							className="text-foreground/80 hover:text-foreground hover:bg-accent transition-colors">
+							<Icon icon="solar:logout-bold-duotone" className="w-5 h-5" />
+							<span className="sr-only">Logout</span>
 						</Button>
+
+						{/* User Avatar with Loading State */}
+						{loading || !user ? (
+							<Skeleton className="h-10 w-10 rounded-full" />
+						) : (
+							<UserAvatar
+								src={user.user.profile_picture}
+								fallback={user.user.name?.charAt(0).toUpperCase() || "U"}
+							/>
+						)}
 
 						{/* Mobile Menu Button */}
 						<Button
 							variant="ghost"
 							size="icon"
-							className={`md:hidden transition-colors ${
-								theme === "dark"
-									? "text-slate-300 hover:text-white hover:bg-slate-800/50"
-									: "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-							}`}
+							className="md:hidden text-foreground/80 hover:text-foreground hover:bg-accent transition-colors"
 							onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
 							<Icon
 								icon={
@@ -200,14 +156,8 @@ export default function Navbar() {
 
 				{/* Mobile Navigation Menu */}
 				{isMobileMenuOpen && (
-					<div
-						className={`md:hidden border-t ${
-							theme === "dark" ? "border-slate-800" : "border-gray-200"
-						}`}>
-						<div
-							className={`px-2 pt-2 pb-3 space-y-1 backdrop-blur-md ${
-								theme === "dark" ? "bg-slate-950/95" : "bg-white/95"
-							}`}>
+					<div className="md:hidden border-t border-border">
+						<div className="px-2 pt-2 pb-3 space-y-1 backdrop-blur-md bg-background/95">
 							{navLinks.map((link) => {
 								const isActive = pathname === link.href;
 
@@ -218,19 +168,13 @@ export default function Navbar() {
 										className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
 											isActive
 												? "text-primary bg-primary/10 border-l-4 border-primary"
-												: theme === "dark"
-												? "text-slate-300 hover:text-white hover:bg-slate-800/50"
-												: "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+												: "text-foreground/80 hover:text-foreground hover:bg-accent"
 										}`}
 										onClick={() => setIsMobileMenuOpen(false)}>
 										<Icon
 											icon={link.icon}
 											className={`w-5 h-5 ${
-												isActive
-													? "text-primary"
-													: theme === "dark"
-													? "text-slate-300"
-													: "text-gray-600"
+												isActive ? "text-primary" : "text-foreground/80"
 											}`}
 										/>
 										<span className="text-base font-medium">{link.label}</span>

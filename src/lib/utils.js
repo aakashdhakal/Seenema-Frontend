@@ -1,5 +1,6 @@
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import axios from "@/lib/axios";
 
 export function cn(...inputs) {
 	return twMerge(clsx(inputs));
@@ -7,10 +8,8 @@ export function cn(...inputs) {
 
 export async function getMainManifest(videoId) {
 	try {
-		const res = await fetch(`http://localhost:8000/api/manifest/${videoId}`);
-		if (!res.ok) throw new Error("Failed to fetch main manifest");
-		const text = await res.text();
-		return text;
+		const res = await axios.get(`/manifest/${videoId}`);
+		return res.data;
 	} catch (err) {
 		console.error("Error fetching main manifest:", err);
 		return null;
@@ -19,12 +18,8 @@ export async function getMainManifest(videoId) {
 
 export async function getManifestByResolution(videoId, resolution) {
 	try {
-		const res = await fetch(
-			`http://localhost:8000/api/manifest/${videoId}/${resolution}`,
-		);
-		if (!res.ok) throw new Error("Failed to fetch manifest by resolution");
-		const text = await res.text();
-		return text;
+		const res = await axios.get(`/manifest/${videoId}/${resolution}`);
+		return res.data;
 	} catch (err) {
 		console.error("Error fetching manifest by resolution:", err);
 		return null;
@@ -33,12 +28,8 @@ export async function getManifestByResolution(videoId, resolution) {
 
 export async function getManifestBySegment(videoId, segmentName) {
 	try {
-		const res = await fetch(
-			`http://localhost:8000/api/manifest/${videoId}/${segmentName}`,
-		);
-		if (!res.ok) throw new Error("Failed to fetch manifest by segment");
-		const text = await res.text();
-		return text;
+		const res = await axios.get(`/manifest/${videoId}/${segmentName}`);
+		return res.data;
 	} catch (err) {
 		console.error("Error fetching manifest by segment:", err);
 		return null;
@@ -47,12 +38,11 @@ export async function getManifestBySegment(videoId, segmentName) {
 
 export async function getVideoSegment(videoId, resolution, segmentName) {
 	try {
-		const res = await fetch(
-			`http://localhost:8000/api/segment/${videoId}/${resolution}/${segmentName}`,
+		const res = await axios.get(
+			`/segment/${videoId}/${resolution}/${segmentName}`,
+			{ responseType: "arraybuffer" },
 		);
-		if (!res.ok) throw new Error("Failed to fetch video segment");
-		const segment = await res.arrayBuffer();
-		return segment;
+		return res.data;
 	} catch (err) {
 		console.error("Error fetching video segment:", err);
 		return null;
@@ -123,10 +113,8 @@ export function getAvailableResolutions(manifestText) {
 
 export async function getVideoData(videoId) {
 	try {
-		const res = await fetch(`http://localhost:8000/api/video/${videoId}`);
-		if (!res.ok) throw new Error("Failed to fetch video data");
-		const data = await res.json();
-		return data;
+		const res = await axios.get(`/video/${videoId}`);
+		return res.data;
 	} catch (err) {
 		console.error("Error fetching video data:", err);
 	}
@@ -134,12 +122,8 @@ export async function getVideoData(videoId) {
 
 export async function getSegmentSizes(videoId, segment) {
 	try {
-		const res = await fetch(
-			`http://localhost:8000/api/getSegmentSizes/${videoId}/${segment}`,
-		);
-		if (!res.ok) throw new Error("Failed to fetch segment sizes");
-		const sizes = await res.json();
-		return sizes;
+		const res = await axios.get(`/getSegmentSizes/${videoId}/${segment}`);
+		return res.data;
 	} catch (err) {
 		console.error("Error fetching segment sizes:", err);
 		return [];
@@ -148,12 +132,10 @@ export async function getSegmentSizes(videoId, segment) {
 
 export async function getInitFile(videoId, resolution) {
 	try {
-		const res = await fetch(
-			`http://localhost:8000/api/init/${videoId}/${resolution}`,
-		);
-		if (!res.ok) throw new Error("Failed to fetch init file");
-		const initFile = await res.arrayBuffer();
-		return initFile;
+		const res = await axios.get(`/init/${videoId}/${resolution}`, {
+			responseType: "arraybuffer",
+		});
+		return res.data;
 	} catch (err) {
 		console.error("Error fetching init file:", err);
 		return null;
@@ -162,12 +144,10 @@ export async function getInitFile(videoId, resolution) {
 
 export async function getIntroVideo(resolution) {
 	try {
-		const res = await fetch(
-			"http://localhost:8000/api/getIntroVideo/" + resolution,
-		);
-		if (!res.ok) throw new Error("Failed to fetch intro video");
-		const video = await res.arrayBuffer();
-		return video;
+		const res = await axios.get(`/getIntroVideo/${resolution}`, {
+			responseType: "arraybuffer",
+		});
+		return res.data;
 	} catch (err) {
 		console.error("Error fetching intro video:", err);
 		return null;
@@ -176,12 +156,10 @@ export async function getIntroVideo(resolution) {
 
 export async function getIntroInit(resolution) {
 	try {
-		const res = await fetch(
-			"http://localhost:8000/api/getIntroInit/" + resolution,
-		);
-		if (!res.ok) throw new Error("Failed to fetch intro init file");
-		const initFile = await res.arrayBuffer();
-		return initFile;
+		const res = await axios.get(`/getIntroInit/${resolution}`, {
+			responseType: "arraybuffer",
+		});
+		return res.data;
 	} catch (err) {
 		console.error("Error fetching intro init file:", err);
 		return null;
@@ -190,14 +168,22 @@ export async function getIntroInit(resolution) {
 
 export async function getIntroManifest(resolution) {
 	try {
-		const res = await fetch(
-			"http://localhost:8000/api/getIntroManifest/" + resolution,
-		);
-		if (!res.ok) throw new Error("Failed to fetch intro manifest");
-		const manifest = await res.text();
-		return manifest;
+		const res = await axios.get(`/getIntroManifest/${resolution}`);
+		return res.data;
 	} catch (err) {
 		console.error("Error fetching intro manifest:", err);
+		return null;
+	}
+}
+
+export async function updateWatchHistory(videoId, currentDuration) {
+	try {
+		const res = await axios.post(`/updateWatchHistory/${videoId}`, {
+			currentDuration,
+		});
+		return res.data;
+	} catch (err) {
+		console.error("Error adding to watch history:", err);
 		return null;
 	}
 }
@@ -226,4 +212,14 @@ export function calculateMinSegmentSize(sizes) {
 		return 1; // Prevent division by zero if all sizes are zero, use a small positive number
 	}
 	return Math.min(...validSizes);
+}
+
+export async function deleteVideo(videoId) {
+	try {
+		const res = await axios.delete(`/deleteVideo/${videoId}`);
+		return res.data;
+	} catch (err) {
+		console.error("Error deleting video:", err);
+		return null;
+	}
 }

@@ -1,7 +1,7 @@
 import { getSegmentSizes, getVideoSegment } from "./utils"; // Assuming utils.js is still separate
 
-const REBUFFER_PENALTY = 10; // Penalty (utility units) per segment of rebuffer.
-const MAX_BUFFER_CAPACITY_SECONDS = 30; // Max desired buffer in seconds (e.g., 3 segments * 5s/segment)
+const REBUFFER_PENALTY = 5; // Penalty (utility units) per segment of rebuffer.
+const MAX_BUFFER_CAPACITY_SECONDS = 20; // Max desired buffer in seconds (e.g., 3 segments * 5s/segment)
 
 // BOLA (Buffer Occupancy Based Lyapunov Algorithm)
 export default async function BOLA(
@@ -151,7 +151,16 @@ export default async function BOLA(
 		0,
 		effectiveSegmentDuration * (Q - QD_max + 1),
 	);
-	await new Promise((resolve) => setTimeout(resolve, pauseTimeSeconds * 1000)); // Convert to milliseconds
+	// await new Promise((resolve) => setTimeout(resolve, pauseTimeSeconds * 1000)); // Convert to milliseconds
+	//console table of scores in each resolution
+	console.table(
+		resolutionList.map((res, index) => ({
+			Resolution: res,
+			Score: score[index].toFixed(2),
+			Utility: U_m[index].toFixed(2),
+			SizeMB: (segmentSizes.sizes[res] / (1024 * 1024)).toFixed(2),
+		})),
+	);
 	return resolutionList[bestResIndex];
 }
 
@@ -196,11 +205,20 @@ export async function getPlaceholderBuffer(
 	segmentList,
 ) {
 	const start = performance.now();
-	console.log(segmentList);
 
+	// Use the highest available resolution for the initial test to gauge max throughput.
+	// Fallback to the lowest if the list is somehow empty.
 	const initialTestResolution =
-		resolutionList[resolutionList.length - 1] || resolutionList[0]; // Try highest resolution, fallback to lowest
+		resolutionList[resolutionList.length - 1] || resolutionList[0];
 
+	if (!initialTestResolution) {
+		console.error(
+			"BOLA-U: No resolutions available to test for placeholder buffer.",
+		);
+		return { startupResolution: "144p", buffer: 0 }; // Return a safe default
+	}
+
+	// Fetch the first segment at the test resolution.
 	const initSegment = await getVideoSegment(
 		videoId,
 		initialTestResolution,
@@ -208,10 +226,13 @@ export async function getPlaceholderBuffer(
 	);
 	const end = performance.now();
 
-	const initDuration = (end - start) / 1000;
+	// Calculate download metrics
+	const initDuration = (end - start) / 1000; // Time to download in seconds
 	const initSizeMB = initSegment.byteLength / (1024 * 1024);
 	const measuredBandwidthMBps = initSizeMB / initDuration;
 
+	// A table mapping resolutions to their approximate required bitrates in Kbps.
+	// This helps in selecting a smart startup resolution.
 	const bitrateTable = {
 		"144p": 150,
 		"240p": 400,
@@ -220,24 +241,32 @@ export async function getPlaceholderBuffer(
 		"720p": 2500,
 		"1080p": 4500,
 		"1440p": 6500,
-		"2160p": 12000, // Just to be safe
+		"2160p": 12000,
 	};
 
+	// Estimate the user's bandwidth in Kbps
 	const estimatedBitrateKbps = measuredBandwidthMBps * 8 * 1024;
-	let startupResolution = "1080p";
-	for (let res of resolutionList) {
+
+	// Determine the best startup resolution based on the measured bandwidth.
+	// Start from the lowest and find the highest sustainable quality.
+	let startupResolution = resolutionList[0] || "144p"; // Default to lowest
+	for (const res of resolutionList) {
 		if (bitrateTable[res] && bitrateTable[res] <= estimatedBitrateKbps) {
 			startupResolution = res;
+		} else {
+			// Since resolutionList is sorted, we can break once we exceed the estimated bandwidth.
+			break;
 		}
 	}
 
-	// placeholderBuffer in seconds, to be passed to BOLA and converted there if needed
-	const placeHolderBuffer =
-		segmentList[0].duration *
-		(initSizeMB / (initDuration * measuredBandwidthMBps));
+	// --- CORRECTED CALCULATION ---
+	// The placeholder buffer is the net gain in buffer time:
+	// (Duration of the segment) - (Time it took to download it).
+	// We use Math.max(0, ...) to ensure the buffer isn't negative, as a deficit is treated as zero buffer.
+	const placeHolderBuffer = Math.max(0, segmentList[0].duration - initDuration);
 
 	return {
 		startupResolution,
-		buffer: placeHolderBuffer,
+		buffer: placeHolderBuffer + segmentList[0].duration + 9, // Add segment duration and intro time to buffer
 	};
 }

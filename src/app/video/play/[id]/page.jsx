@@ -9,6 +9,7 @@ import {
 	parseManifest,
 	getAvailableResolutions,
 	getSegmentSizes,
+	updateWatchHistory,
 } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -21,8 +22,10 @@ export default function VideoPage({ params }) {
 	const { id: videoId } = use(params);
 	const [videoData, setVideoData] = useState({});
 	const [resolutionList, setResolutionList] = useState([]);
-	const [resolution, setResolution] = useState(null);
+	const [resolution, setResolution] = useState("Auto");
 	const [segmentList, setSegmentList] = useState({});
+
+	const backendURL = process.env.BACKEND_API_URL || "http://localhost:8000/";
 
 	// Video control states
 	const [isPlaying, setIsPlaying] = useState(false);
@@ -71,13 +74,6 @@ export default function VideoPage({ params }) {
 		fetchMainManifest();
 	}, [videoId]);
 
-	// Update resolution when resolutionList changes
-	useEffect(() => {
-		if (resolutionList.length > 0 && !resolution) {
-			setResolution(resolutionList[0]);
-		}
-	}, [resolutionList]);
-
 	// Update segment list when resolution changes
 	useEffect(() => {
 		if (!videoId || !resolution) {
@@ -85,7 +81,7 @@ export default function VideoPage({ params }) {
 		}
 		const fetchSegmentList = async () => {
 			try {
-				const manifest = await getManifestByResolution(videoId, resolution);
+				const manifest = await getManifestByResolution(videoId, "144p");
 				if (!manifest)
 					throw new Error("Failed to fetch manifest by resolution");
 				const segments = parseManifest(manifest);
@@ -107,12 +103,14 @@ export default function VideoPage({ params }) {
 			console.log("Initializing video stream with segments:", resolutionList);
 			const startStream = async () => {
 				setIsLoading(true);
+				console.log("Starting video stream initialization...");
+				// Initialize the video stream with the selected resolution and segments
 				await initializeVideoStream(
 					videoRef.current,
 					videoId,
 					segmentList,
 					resolutionList,
-					videoData.duration + 7, // or just videoData.duration
+					videoData.duration + 9, // or just videoData.duration
 				).catch((err) => {
 					console.error("Error initializing video stream:", err);
 				});
@@ -121,6 +119,14 @@ export default function VideoPage({ params }) {
 			startStream();
 		}
 	}, [segmentList, videoId, resolution, resolutionList, videoData.duration]);
+
+	// useEffect(() => {
+	// 	if (!videoId) return;
+	// 	const interval = setInterval(() => {
+	// 		updateWatchHistory(videoId, currentTime);
+	// 	}, 10000); // every 30 seconds
+	// 	return () => clearInterval(interval);
+	// }, [videoId, currentTime]);
 
 	useEffect(() => {
 		const handleKeyDown = (e) => {
@@ -339,6 +345,8 @@ export default function VideoPage({ params }) {
 				}}
 				onWaiting={() => setIsLoading(true)}
 				onError={(e) => console.error("Video error", e.target.error)}
+				poster={videoData.backdrop_path || ""}
+				onEnded={() => {}}
 			/>
 
 			{/* Loading Overlay */}
@@ -370,9 +378,10 @@ export default function VideoPage({ params }) {
 				<div className="px-4 pb-2">
 					<div className="relative">
 						{/* Buffer Progress (behind current progress) */}
-						<div className="absolute top-1/2 transform -translate-y-1/2 w-full h-1 bg-white/20 rounded-full">
+						<div className="absolute top-1/2 transform -translate-y-1/2 w-full h-1 bg-transparent rounded-full z-10">
+							{console.log("Buffer Info:", bufferInfo)}
 							<div
-								className="h-full bg-white rounded-full transition-all duration-300"
+								className="h-full bg-white/50 rounded-full transition-all duration-300"
 								style={{
 									width: `${Math.min(bufferInfo.bufferedPercentage, 100)}%`,
 									opacity: 0.6,
@@ -389,10 +398,10 @@ export default function VideoPage({ params }) {
 						{/* Seek Slider */}
 						<Slider
 							value={[currentTime]}
-							max={duration + 7 || 100}
+							max={duration || 100}
 							step={0.1}
 							onValueChange={handleSeek}
-							className="w-full cursor-pointer relative z-10"
+							className="w-full cursor-pointer relative z-10 custom-transparent-range"
 						/>
 					</div>
 				</div>
@@ -468,8 +477,7 @@ export default function VideoPage({ params }) {
 
 						{/* Time Display */}
 						<div className="text-white text-sm">
-							{formatTime(currentTime)} /{" "}
-							{formatTime(videoData.duration + 7 || 0)}
+							{formatTime(currentTime)} / {formatTime(duration || 0)}
 						</div>
 					</div>
 
@@ -484,7 +492,7 @@ export default function VideoPage({ params }) {
 
 						{/* Quality Selector */}
 						<CustomDropdown
-							options={resolutionList}
+							options={["Auto", ...resolutionList]}
 							selectedOption={resolution}
 							onSelect={(res) => {
 								setResolution(res);

@@ -16,9 +16,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Checkbox } from "@/components/ui/checkbox";
-import axios from "@/lib/axios"; // your globally pre-configured axiosClient
-import { getCSRFToken, useAuth } from "@/hooks/useAuth";
-import { get } from "react-hook-form";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function SignupPage() {
 	const [isSignupLoading, setisSignupLoading] = useState(false);

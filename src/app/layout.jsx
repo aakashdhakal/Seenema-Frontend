@@ -4,6 +4,7 @@ import Navbar from "@/components/combinedComponents/Navbar";
 import { SWRConfig } from "swr";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -30,25 +31,26 @@ export default function RootLayout({ children }) {
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<body
-				className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} antialiased`}>
-				<ThemeProvider
-					attribute="class"
-					defaultTheme="dark"
-					enableSystem={false}
-					disableTransitionOnChange>
-					<SWRConfig
-						value={{
-							revalidateOnFocus: false,
-							revalidateOnReconnect: false,
-							dedupingInterval: 300000, // 5 minutes
-							focusThrottleInterval: 3600000, // 1 hour
-						}}>
-						<AuthProvider>
+				className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} `}>
+				<SWRConfig
+					value={{
+						revalidateOnFocus: false,
+						revalidateOnReconnect: false,
+						dedupingInterval: 300000, // 5 minutes
+						focusThrottleInterval: 3600000, // 1 hour
+					}}>
+					<AuthProvider>
+						<ThemeProvider
+							attribute="class"
+							defaultTheme="system"
+							enableSystem
+							disableTransitionOnChange>
 							{/* <Navbar /> */}
 							{children}
-						</AuthProvider>
-					</SWRConfig>
-				</ThemeProvider>
+						</ThemeProvider>
+						<Toaster />
+					</AuthProvider>
+				</SWRConfig>
 			</body>
 		</html>
 	);

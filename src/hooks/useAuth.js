@@ -11,7 +11,7 @@ export const getCSRFToken = async () => {
 };
 
 export const useAuth = () => {
-	const { data: user, error, isLoading, mutate } = useSWR("/api/user", fetcher);
+	const { data: user, error, isLoading, mutate } = useSWR("/user", fetcher);
 
 	const login = async ({ email, password }) => {
 		await getCSRFToken(); // this triggers Laravel to send back CSRF token in cookie

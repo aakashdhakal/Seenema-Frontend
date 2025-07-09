@@ -149,34 +149,6 @@ export default function AdminSidebar() {
 				</SidebarGroup>
 			</SidebarContent>
 
-			<SidebarFooter className="border-t border-sidebar-border p-4">
-				<div className="flex items-center space-x-3">
-					<Avatar className="h-10 w-10 border-2 border-sidebar-border">
-						<AvatarImage src="/admin-avatar.png" alt="Admin" />
-						<AvatarFallback className="bg-primary text-primary-foreground font-semibold">
-							AD
-						</AvatarFallback>
-					</Avatar>
-					<div className="flex-1 min-w-0">
-						<p className="font-medium text-sm text-sidebar-foreground truncate">
-							{admin.name}
-						</p>
-						<p className="text-xs text-sidebar-foreground/60 truncate">
-							{admin.email}
-						</p>
-					</div>
-					<Button
-						variant="ghost"
-						size="sm"
-						className="h-8 w-8 p-0 hover:bg-sidebar-accent rounded-md">
-						<Icon
-							icon="solar:logout-2-bold-duotone"
-							className="h-4 w-4 text-sidebar-foreground/60 hover:text-sidebar-foreground"
-						/>
-					</Button>
-				</div>
-			</SidebarFooter>
-
 			<SidebarRail />
 		</Sidebar>
 	);

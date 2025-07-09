@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,7 +14,6 @@ import PageLoadingComponent from "@/components/combinedComponents/PageLoadingCom
 export default function VideoDetailsPage() {
 	const { slug } = useParams();
 	const router = useRouter();
-	const { theme } = useTheme();
 	const [mounted, setMounted] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
 	const [videoData, setVideoData] = useState(null);
@@ -188,32 +186,21 @@ export default function VideoDetailsPage() {
 
 	if (!videoData) {
 		return (
-			<div
-				className={`min-h-screen flex items-center justify-center ${
-					theme === "dark"
-						? "bg-gradient-to-br from-slate-950 via-slate-900 to-green-950"
-						: "bg-gradient-to-br from-gray-50 via-white to-green-50"
-				}`}>
+			<div className="min-h-screen bg-background flex items-center justify-center">
 				<div className="text-center">
 					<Icon
 						icon="solar:video-library-bold-duotone"
 						className="w-24 h-24 text-primary mx-auto mb-4"
 					/>
-					<h1
-						className={`text-2xl font-bold mb-4 ${
-							theme === "dark" ? "text-white" : "text-gray-900"
-						}`}>
+					<h1 className="text-2xl font-bold mb-4 text-foreground">
 						Video Not Found
 					</h1>
-					<p
-						className={`mb-6 ${
-							theme === "dark" ? "text-slate-400" : "text-gray-600"
-						}`}>
+					<p className="mb-6 text-muted-foreground">
 						The video you're looking for doesn't exist or has been removed.
 					</p>
 					<Button
 						onClick={() => router.push("/home")}
-						className="bg-gradient-to-r from-primary to-green-600">
+						className="bg-primary hover:bg-primary/90 text-primary-foreground">
 						<Icon icon="solar:arrow-left-bold" className="w-4 h-4 mr-2" />
 						Go Back Home
 					</Button>
@@ -223,12 +210,7 @@ export default function VideoDetailsPage() {
 	}
 
 	return (
-		<div
-			className={`min-h-screen transition-colors duration-300 ${
-				theme === "dark"
-					? "bg-gradient-to-br from-slate-950 via-slate-900 to-green-950"
-					: "bg-gradient-to-br from-gray-50 via-white to-green-50"
-			}`}>
+		<div className="min-h-screen bg-background">
 			<Navbar />
 
 			{/* Hero Section */}
@@ -236,32 +218,20 @@ export default function VideoDetailsPage() {
 				<div
 					className="absolute inset-0 bg-cover bg-center bg-no-repeat"
 					style={{ backgroundImage: `url(${videoData.backdrop})` }}>
-					<div
-						className={`absolute inset-0 transition-colors duration-300 ${
-							theme === "dark"
-								? "bg-gradient-to-r from-slate-950/95 via-slate-900/80 to-slate-950/50"
-								: "bg-gradient-to-r from-white/95 via-gray-100/80 to-white/50"
-						}`}
-					/>
-					<div
-						className={`absolute inset-0 transition-colors duration-300 ${
-							theme === "dark"
-								? "bg-gradient-to-t from-slate-950 via-transparent to-transparent"
-								: "bg-gradient-to-t from-white via-transparent to-transparent"
-						}`}
-					/>
+					<div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/80 to-background/50" />
+					<div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
 				</div>
+
+				{/* Decorative Elements */}
+				<div className="absolute top-20 left-20 w-32 h-32 bg-primary/5 rounded-full blur-3xl animate-pulse"></div>
+				<div className="absolute bottom-40 right-32 w-48 h-48 bg-primary/3 rounded-full blur-3xl animate-pulse delay-1000"></div>
 
 				{/* Back Button */}
 				<div className="absolute top-24 left-6 z-10">
 					<Button
 						variant="ghost"
 						onClick={() => router.back()}
-						className={`backdrop-blur-sm transition-all duration-300 ${
-							theme === "dark"
-								? "bg-slate-900/50 text-white hover:bg-slate-800/70"
-								: "bg-white/50 text-gray-900 hover:bg-white/70"
-						}`}>
+						className="backdrop-blur-sm bg-background/50 text-foreground hover:bg-accent hover:text-accent-foreground">
 						<Icon icon="solar:arrow-left-bold" className="w-5 h-5 mr-2" />
 						Back
 					</Button>
@@ -286,42 +256,25 @@ export default function VideoDetailsPage() {
 							{/* Content */}
 							<div className="flex-1 max-w-3xl">
 								{/* Title */}
-								<h1
-									className={`text-4xl md:text-6xl font-bold mb-4 leading-tight transition-colors duration-300 ${
-										theme === "dark" ? "text-white" : "text-gray-900"
-									}`}>
-									<span
-										className={`bg-gradient-to-r bg-clip-text text-transparent transition-colors duration-300 ${
-											theme === "dark"
-												? "from-white via-green-100 to-primary"
-												: "from-gray-900 via-green-700 to-primary"
-										}`}>
+								<h1 className="text-4xl md:text-6xl font-bold mb-4 leading-tight text-foreground">
+									<span className="bg-gradient-to-r bg-clip-text text-transparent from-foreground via-primary/90 to-primary">
 										{videoData.title}
 									</span>
 								</h1>
 
 								{/* Metadata */}
 								<div className="flex flex-wrap items-center gap-4 mb-6">
-									<div
-										className={`flex items-center gap-2 backdrop-blur-sm px-3 py-1 rounded-full transition-colors duration-300 ${
-											theme === "dark" ? "bg-white/10" : "bg-black/10"
-										} ${theme === "dark" ? "text-white/90" : "text-gray-700"}`}>
+									<div className="flex items-center gap-2 backdrop-blur-sm px-3 py-1 rounded-full bg-foreground/10 text-foreground/90">
 										<Icon
 											icon="solar:star-bold-duotone"
 											className="w-4 h-4 text-yellow-400"
 										/>
 										<span className="font-semibold">{videoData.rating}</span>
 									</div>
-									<span
-										className={`text-lg transition-colors duration-300 ${
-											theme === "dark" ? "text-white/90" : "text-gray-700"
-										}`}>
+									<span className="text-lg text-foreground/90">
 										{videoData.year}
 									</span>
-									<span
-										className={`text-lg transition-colors duration-300 ${
-											theme === "dark" ? "text-white/90" : "text-gray-700"
-										}`}>
+									<span className="text-lg text-foreground/90">
 										{videoData.duration}
 									</span>
 									<Badge
@@ -329,7 +282,7 @@ export default function VideoDetailsPage() {
 										className="border-primary/50 text-primary bg-primary/10">
 										{videoData.maturityRating}
 									</Badge>
-									<Badge className="bg-gradient-to-r from-primary to-green-600 text-white">
+									<Badge className="bg-primary hover:bg-primary/90 text-primary-foreground">
 										4K HDR
 									</Badge>
 								</div>
@@ -339,17 +292,15 @@ export default function VideoDetailsPage() {
 									{videoData.genre.map((g, index) => (
 										<Badge
 											key={index}
-											className="bg-gradient-to-r from-primary/20 to-green-600/20 text-primary border-primary/30 hover:from-primary/30 hover:to-green-600/30 transition-all duration-200">
+											variant="outline"
+											className="border-primary/30 text-primary bg-primary/10 hover:bg-primary/20">
 											{g}
 										</Badge>
 									))}
 								</div>
 
 								{/* Description */}
-								<p
-									className={`text-lg mb-8 leading-relaxed transition-colors duration-300 ${
-										theme === "dark" ? "text-white/90" : "text-gray-700"
-									}`}>
+								<p className="text-lg mb-8 leading-relaxed text-foreground/90">
 									{videoData.description}
 								</p>
 
@@ -357,41 +308,29 @@ export default function VideoDetailsPage() {
 								<div className="flex flex-wrap gap-4">
 									<Button
 										size="lg"
-										className="bg-gradient-to-r from-primary to-green-600 hover:from-primary/90 hover:to-green-600/90 text-white px-8 py-3 text-lg font-semibold shadow-lg transition-all duration-300"
-										onClick={() => router.push(`/watch/${videoData.id}`)}>
+										className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 text-lg font-semibold shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-primary/25"
+										onClick={() => router.push(`/video/play/${videoData.id}`)}>
 										<Icon icon="solar:play-bold" className="w-6 h-6 mr-2" />
 										Watch Now
 									</Button>
 									<Button
 										variant="outline"
 										size="lg"
-										className={`backdrop-blur-sm px-8 py-3 text-lg transition-all duration-300 ${
-											theme === "dark"
-												? "border-white/30 text-white hover:bg-white/10 hover:border-white/50"
-												: "border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400"
-										}`}>
+										className="backdrop-blur-sm px-8 py-3 text-lg border-border text-foreground hover:bg-accent hover:text-accent-foreground">
 										<Icon icon="solar:bookmark-bold" className="w-6 h-6 mr-2" />
 										Add to Watchlist
 									</Button>
 									<Button
 										variant="ghost"
 										size="lg"
-										className={`px-8 py-3 text-lg transition-all duration-300 ${
-											theme === "dark"
-												? "text-white hover:bg-white/10"
-												: "text-gray-700 hover:bg-gray-100"
-										}`}>
+										className="px-8 py-3 text-lg text-foreground hover:bg-accent hover:text-accent-foreground">
 										<Icon icon="solar:download-bold" className="w-6 h-6 mr-2" />
 										Download
 									</Button>
 									<Button
 										variant="ghost"
 										size="lg"
-										className={`px-8 py-3 text-lg transition-all duration-300 ${
-											theme === "dark"
-												? "text-white hover:bg-white/10"
-												: "text-gray-700 hover:bg-gray-100"
-										}`}>
+										className="px-8 py-3 text-lg text-foreground hover:bg-accent hover:text-accent-foreground">
 										<Icon icon="solar:share-bold" className="w-6 h-6 mr-2" />
 										Share
 									</Button>
@@ -406,7 +345,7 @@ export default function VideoDetailsPage() {
 			<section className="relative py-16">
 				<div className="container mx-auto px-6">
 					{/* Tab Navigation */}
-					<div className="flex flex-wrap gap-4 mb-8 border-b border-opacity-20">
+					<div className="flex flex-wrap gap-4 mb-8 border-b border-border">
 						{[
 							{
 								id: "overview",
@@ -434,10 +373,8 @@ export default function VideoDetailsPage() {
 								variant={activeTab === tab.id ? "default" : "ghost"}
 								className={`px-6 py-3 transition-all duration-200 ${
 									activeTab === tab.id
-										? "bg-gradient-to-r from-primary to-green-600 text-white shadow-lg"
-										: theme === "dark"
-										? "text-slate-400 hover:text-white hover:bg-slate-800/50"
-										: "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+										? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
+										: "text-muted-foreground hover:text-foreground hover:bg-accent"
 								}`}
 								onClick={() => setActiveTab(tab.id)}>
 								<Icon icon={tab.icon} className="w-4 h-4 mr-2" />
@@ -451,48 +388,28 @@ export default function VideoDetailsPage() {
 						{activeTab === "overview" && (
 							<div className="space-y-8">
 								<div>
-									<h3
-										className={`text-2xl font-bold mb-4 transition-colors duration-300 ${
-											theme === "dark" ? "text-white" : "text-gray-900"
-										}`}>
+									<h3 className="text-2xl font-bold mb-4 text-foreground">
 										Synopsis
 									</h3>
-									<p
-										className={`text-lg leading-relaxed transition-colors duration-300 ${
-											theme === "dark" ? "text-slate-300" : "text-gray-700"
-										}`}>
+									<p className="text-lg leading-relaxed text-foreground/80">
 										{videoData.longDescription}
 									</p>
 								</div>
 
 								<div>
-									<h3
-										className={`text-2xl font-bold mb-4 transition-colors duration-300 ${
-											theme === "dark" ? "text-white" : "text-gray-900"
-										}`}>
+									<h3 className="text-2xl font-bold mb-4 text-foreground">
 										Awards & Recognition
 									</h3>
 									<div className="grid md:grid-cols-2 gap-4">
 										{videoData.awards.map((award, index) => (
 											<div
 												key={index}
-												className={`flex items-center p-4 rounded-lg transition-colors duration-300 ${
-													theme === "dark"
-														? "bg-slate-800/30"
-														: "bg-gray-100/50"
-												}`}>
+												className="flex items-center p-4 rounded-lg bg-card hover:bg-card/80 transition-colors duration-300">
 												<Icon
 													icon="solar:medal-star-bold-duotone"
 													className="w-6 h-6 text-yellow-500 mr-3"
 												/>
-												<span
-													className={
-														theme === "dark"
-															? "text-slate-300"
-															: "text-gray-700"
-													}>
-													{award}
-												</span>
+												<span className="text-card-foreground">{award}</span>
 											</div>
 										))}
 									</div>
@@ -503,21 +420,14 @@ export default function VideoDetailsPage() {
 						{activeTab === "cast" && (
 							<div className="space-y-8">
 								<div>
-									<h3
-										className={`text-2xl font-bold mb-6 transition-colors duration-300 ${
-											theme === "dark" ? "text-white" : "text-gray-900"
-										}`}>
+									<h3 className="text-2xl font-bold mb-6 text-foreground">
 										Main Cast
 									</h3>
 									<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
 										{videoData.cast.map((actor, index) => (
 											<Card
 												key={index}
-												className={`border-opacity-50 hover:border-primary/50 transition-all duration-300 cursor-pointer group ${
-													theme === "dark"
-														? "bg-gradient-to-br from-slate-900/50 to-slate-800/50 border-slate-700/50"
-														: "bg-gradient-to-br from-white/50 to-gray-100/50 border-gray-300/50"
-												}`}>
+												className="bg-card border-border hover:border-primary/50 transition-all duration-300 cursor-pointer group">
 												<CardContent className="p-4">
 													<div className="relative aspect-square mb-3 rounded-lg overflow-hidden">
 														<Image
@@ -527,18 +437,10 @@ export default function VideoDetailsPage() {
 															className="object-cover group-hover:scale-105 transition-transform duration-300"
 														/>
 													</div>
-													<h4
-														className={`font-semibold text-sm mb-1 transition-colors duration-300 ${
-															theme === "dark" ? "text-white" : "text-gray-900"
-														}`}>
+													<h4 className="font-semibold text-sm mb-1 text-card-foreground">
 														{actor.name}
 													</h4>
-													<p
-														className={`text-xs transition-colors duration-300 ${
-															theme === "dark"
-																? "text-slate-400"
-																: "text-gray-600"
-														}`}>
+													<p className="text-xs text-muted-foreground">
 														{actor.character}
 													</p>
 												</CardContent>
@@ -548,33 +450,18 @@ export default function VideoDetailsPage() {
 								</div>
 
 								<div>
-									<h3
-										className={`text-2xl font-bold mb-6 transition-colors duration-300 ${
-											theme === "dark" ? "text-white" : "text-gray-900"
-										}`}>
+									<h3 className="text-2xl font-bold mb-6 text-foreground">
 										Crew
 									</h3>
 									<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
 										{videoData.crew.map((member, index) => (
 											<div
 												key={index}
-												className={`p-4 rounded-lg transition-colors duration-300 ${
-													theme === "dark"
-														? "bg-slate-800/30"
-														: "bg-gray-100/50"
-												}`}>
-												<h4
-													className={`font-semibold mb-1 transition-colors duration-300 ${
-														theme === "dark" ? "text-white" : "text-gray-900"
-													}`}>
+												className="p-4 rounded-lg bg-card hover:bg-card/80 transition-colors duration-300">
+												<h4 className="font-semibold mb-1 text-card-foreground">
 													{member.name}
 												</h4>
-												<p
-													className={`text-sm transition-colors duration-300 ${
-														theme === "dark"
-															? "text-slate-400"
-															: "text-gray-600"
-													}`}>
+												<p className="text-sm text-muted-foreground">
 													{member.role}
 												</p>
 											</div>
@@ -586,21 +473,14 @@ export default function VideoDetailsPage() {
 
 						{activeTab === "episodes" && (
 							<div>
-								<h3
-									className={`text-2xl font-bold mb-6 transition-colors duration-300 ${
-										theme === "dark" ? "text-white" : "text-gray-900"
-									}`}>
+								<h3 className="text-2xl font-bold mb-6 text-foreground">
 									Seasons & Episodes
 								</h3>
 								<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
 									{videoData.episodes.map((season, index) => (
 										<Card
 											key={index}
-											className={`border-opacity-50 hover:border-primary/50 transition-all duration-300 cursor-pointer group ${
-												theme === "dark"
-													? "bg-gradient-to-br from-slate-900/50 to-slate-800/50 border-slate-700/50"
-													: "bg-gradient-to-br from-white/50 to-gray-100/50 border-gray-300/50"
-											}`}>
+											className="bg-card border-border hover:border-primary/50 transition-all duration-300 cursor-pointer group">
 											<CardContent className="p-0">
 												<div className="relative aspect-video overflow-hidden rounded-t-lg">
 													<Image
@@ -611,18 +491,10 @@ export default function VideoDetailsPage() {
 													/>
 												</div>
 												<div className="p-4">
-													<h4
-														className={`font-bold text-lg mb-2 transition-colors duration-300 ${
-															theme === "dark" ? "text-white" : "text-gray-900"
-														}`}>
+													<h4 className="font-bold text-lg mb-2 text-card-foreground">
 														Season {season.season}
 													</h4>
-													<div
-														className={`flex items-center gap-2 mb-2 text-sm transition-colors duration-300 ${
-															theme === "dark"
-																? "text-slate-400"
-																: "text-gray-600"
-														}`}>
+													<div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
 														<Icon
 															icon="solar:calendar-bold"
 															className="w-4 h-4"
@@ -631,12 +503,7 @@ export default function VideoDetailsPage() {
 														<span>•</span>
 														<span>{season.episodes} Episodes</span>
 													</div>
-													<p
-														className={`text-xs leading-relaxed transition-colors duration-300 ${
-															theme === "dark"
-																? "text-slate-300"
-																: "text-gray-700"
-														}`}>
+													<p className="text-xs leading-relaxed text-card-foreground/80">
 														{season.description}
 													</p>
 												</div>
@@ -650,95 +517,48 @@ export default function VideoDetailsPage() {
 						{activeTab === "details" && (
 							<div className="space-y-8">
 								<div>
-									<h3
-										className={`text-2xl font-bold mb-6 transition-colors duration-300 ${
-											theme === "dark" ? "text-white" : "text-gray-900"
-										}`}>
+									<h3 className="text-2xl font-bold mb-6 text-foreground">
 										Production Details
 									</h3>
 									<div className="grid md:grid-cols-2 gap-8">
 										<div className="space-y-4">
-											<div
-												className={`p-4 rounded-lg transition-colors duration-300 ${
-													theme === "dark"
-														? "bg-slate-800/30"
-														: "bg-gray-100/50"
-												}`}>
-												<h4 className={`font-semibold mb-2 text-primary`}>
+											<div className="p-4 rounded-lg bg-card">
+												<h4 className="font-semibold mb-2 text-primary">
 													Genre
 												</h4>
-												<p
-													className={
-														theme === "dark"
-															? "text-slate-300"
-															: "text-gray-700"
-													}>
+												<p className="text-card-foreground">
 													{videoData.genre.join(", ")}
 												</p>
 											</div>
-											<div
-												className={`p-4 rounded-lg transition-colors duration-300 ${
-													theme === "dark"
-														? "bg-slate-800/30"
-														: "bg-gray-100/50"
-												}`}>
-												<h4 className={`font-semibold mb-2 text-primary`}>
+											<div className="p-4 rounded-lg bg-card">
+												<h4 className="font-semibold mb-2 text-primary">
 													Release Year
 												</h4>
-												<p
-													className={
-														theme === "dark"
-															? "text-slate-300"
-															: "text-gray-700"
-													}>
-													{videoData.year}
-												</p>
+												<p className="text-card-foreground">{videoData.year}</p>
 											</div>
-											<div
-												className={`p-4 rounded-lg transition-colors duration-300 ${
-													theme === "dark"
-														? "bg-slate-800/30"
-														: "bg-gray-100/50"
-												}`}>
-												<h4 className={`font-semibold mb-2 text-primary`}>
+											<div className="p-4 rounded-lg bg-card">
+												<h4 className="font-semibold mb-2 text-primary">
 													Rating
 												</h4>
-												<p
-													className={
-														theme === "dark"
-															? "text-slate-300"
-															: "text-gray-700"
-													}>
+												<p className="text-card-foreground">
 													{videoData.maturityRating}
 												</p>
 											</div>
 										</div>
 										<div>
-											<h4
-												className={`font-semibold mb-4 transition-colors duration-300 ${
-													theme === "dark" ? "text-white" : "text-gray-900"
-												}`}>
+											<h4 className="font-semibold mb-4 text-foreground">
 												Interesting Facts
 											</h4>
 											<div className="space-y-3">
 												{videoData.facts.map((fact, index) => (
 													<div
 														key={index}
-														className={`flex items-start p-3 rounded-lg transition-colors duration-300 ${
-															theme === "dark"
-																? "bg-slate-800/30"
-																: "bg-gray-100/50"
-														}`}>
+														className="flex items-start p-3 rounded-lg bg-card">
 														<Icon
 															icon="solar:lightbulb-bolt-bold-duotone"
 															className="w-5 h-5 text-primary mr-3 mt-0.5"
 														/>
-														<span
-															className={`text-sm transition-colors duration-300 ${
-																theme === "dark"
-																	? "text-slate-300"
-																	: "text-gray-700"
-															}`}>
+														<span className="text-sm text-card-foreground">
 															{fact}
 														</span>
 													</div>
@@ -754,22 +574,15 @@ export default function VideoDetailsPage() {
 					{/* Similar Content */}
 					<Separator className="my-16" />
 					<div>
-						<h2
-							className={`text-3xl font-bold mb-8 flex items-center gap-4 transition-colors duration-300 ${
-								theme === "dark" ? "text-white" : "text-gray-900"
-							}`}>
+						<h2 className="text-3xl font-bold mb-8 flex items-center gap-4 text-foreground">
 							More Like This
-							<div className="w-12 h-1 bg-gradient-to-r from-primary to-green-600 rounded-full"></div>
+							<div className="w-12 h-1 bg-gradient-to-r from-primary to-primary/60 rounded-full"></div>
 						</h2>
 						<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
 							{videoData.similar.map((item, index) => (
 								<Card
 									key={index}
-									className={`border-opacity-50 hover:border-primary/50 transition-all duration-300 cursor-pointer group ${
-										theme === "dark"
-											? "bg-gradient-to-br from-slate-900/50 to-slate-800/50 border-slate-700/50"
-											: "bg-gradient-to-br from-white/50 to-gray-100/50 border-gray-300/50"
-									}`}
+									className="bg-card border-border hover:border-primary/50 transition-all duration-300 cursor-pointer group"
 									onClick={() => router.push(`/video/${item.id}`)}>
 									<CardContent className="p-0">
 										<div className="relative aspect-[2/3] overflow-hidden rounded-lg">
@@ -786,7 +599,7 @@ export default function VideoDetailsPage() {
 												</h4>
 												<Button
 													size="sm"
-													className="bg-primary hover:bg-primary/90 text-white">
+													className="bg-primary hover:bg-primary/90 text-primary-foreground">
 													<Icon
 														icon="solar:play-bold"
 														className="w-3 h-3 mr-1"

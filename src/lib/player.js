@@ -5,15 +5,15 @@ import {
 	getIntroManifest,
 	getIntroVideo,
 	parseManifest,
-} from "./utils"; // Assuming utils.js is still separate
+} from "./utils";
 
-import BOLA_Algorithm from "./bola"; // Renamed the import to avoid conflict with function name
+import BOLA from "./bola";
 import { getPlaceholderBuffer } from "./bola";
 
-const BANDWIDTH_ALPHA = 0.6; // Lower alpha (e.g., 0.1 to 0.3) for more smoothing, higher for faster reaction. 0.1 is very conservative, adjust as needed (e.g., 0.2-0.5).
-const REBUFFER_PENALTY = 10; // Penalty (utility units) per segment of rebuffer.
-const MAX_BUFFER_CAPACITY_SECONDS = 30; // Max desired buffer in seconds (e.g., 3 segments * 5s/segment)
-const FILL_THRESHOLD_SEGMENTS = 6; // Download next segment when buffer drops to 2 segments (or 10s if typical is 5s)
+const BANDWIDTH_ALPHA = 0.5; // Smoothing factor for bandwidth estimation
+const REBUFFER_PENALTY = 5;
+const MAX_BUFFER_CAPACITY_SECONDS = 20;
+const FILL_THRESHOLD_SEGMENTS = 4;
 
 function getCurrentBufferLevel(videoElement) {
 	if (
@@ -23,7 +23,6 @@ function getCurrentBufferLevel(videoElement) {
 	) {
 		return 0;
 	}
-	// buffered.end(0) gives the end time of the first (and usually only) buffered range
 	return videoElement.buffered.end(0) - videoElement.currentTime;
 }
 
@@ -38,17 +37,37 @@ export async function initializeVideoStream(
 		console.error("Missing videoElement, videoId, or segmentList.");
 		return;
 	}
+	console.log("🎥 Initializing video stream for ID:", videoId);
+	if (videoElement.src) {
+		URL.revokeObjectURL(videoElement.src);
+		videoElement.removeAttribute("src");
+		videoElement.load();
+	}
 
 	const mediaSource = new MediaSource();
 	videoElement.src = URL.createObjectURL(mediaSource);
 
 	mediaSource.addEventListener("sourceopen", async () => {
-		mediaSource.duration = videoDuration;
-		const sourceBuffer = mediaSource.addSourceBuffer(
-			'video/mp4; codecs="avc1.42E01E, mp4a.40.2"',
-		);
-
 		try {
+			const sourceBuffer = mediaSource.addSourceBuffer(
+				'video/mp4; codecs="avc1.42E01E, mp4a.40.2"',
+			);
+
+			// Wait until sourceBuffer is not updating before setting duration
+			const setDurationWhenReady = () => {
+				if (!sourceBuffer.updating) {
+					mediaSource.duration = videoDuration;
+				} else {
+					sourceBuffer.addEventListener(
+						"updateend",
+						() => {
+							mediaSource.duration = videoDuration;
+						},
+						{ once: true },
+					);
+				}
+			};
+			setDurationWhenReady();
 			const placeholderBuffer = await getPlaceholderBuffer(
 				videoId,
 				resolutionList,
@@ -88,7 +107,6 @@ async function playIntro(sourceBuffer, resolution) {
 				sourceBuffer.removeEventListener("updateend", onIntroInitEnd);
 
 				let introIndex = 0;
-
 				const appendNextIntroSegment = async () => {
 					if (introIndex >= introSegments.length) {
 						console.log("✅ Intro finished.");
@@ -96,7 +114,6 @@ async function playIntro(sourceBuffer, resolution) {
 					}
 
 					const segmentData = await getIntroVideo(resolution);
-
 					if (!segmentData) {
 						console.warn("Intro segment missing, skipping...");
 						introIndex++;
@@ -113,6 +130,7 @@ async function playIntro(sourceBuffer, resolution) {
 						},
 						{ once: true },
 					);
+
 					sourceBuffer.appendBuffer(segmentData);
 				};
 
@@ -129,7 +147,7 @@ async function startMainPlayback(
 	videoId,
 	segmentList,
 	resolutionList,
-	placeholderBuffer, // placeholderBuffer.buffer is in SECONDS
+	placeholderBuffer,
 	startupRes,
 	mediaSource,
 ) {
@@ -139,6 +157,7 @@ async function startMainPlayback(
 	let segmentIndex = 0;
 	let lastSelectedResolution = startupRes;
 	let lastBandwidth = null;
+	let isSeeking = false;
 
 	const introManifestText = await getIntroManifest(startupRes);
 	const introSegments = parseManifest(introManifestText);
@@ -149,63 +168,44 @@ async function startMainPlayback(
 	sourceBuffer.timestampOffset = introDuration;
 
 	const totalDuration = segmentList.reduce((acc, seg) => acc + seg.duration, 0);
-
-	// Define your buffer thresholds based on segment duration
-	// Assuming segment durations are somewhat consistent, let's use the first segment's duration
-	const typicalSegmentDuration = segmentList[0]?.duration || 5; // Default to 5s if unknown
-	const MAX_BUFFER_SEGMENTS =
-		MAX_BUFFER_CAPACITY_SECONDS / typicalSegmentDuration;
+	const typicalSegmentDuration = segmentList[0]?.duration || 5;
 
 	const appendNextSegment = async () => {
-		if (segmentIndex >= segmentList.length) {
-			console.log("✅ All segments appended.");
-			if (mediaSource.readyState === "open") {
+		if (isSeeking || segmentIndex >= segmentList.length) {
+			if (
+				segmentIndex >= segmentList.length &&
+				mediaSource.readyState === "open"
+			) {
+				console.log("✅ All segments appended.");
 				mediaSource.endOfStream();
 			}
 			return;
 		}
 
-		const segment = segmentList[segmentIndex];
-
-		// --- NEW BUFFER MANAGEMENT LOGIC ---
-		// Wait if the buffer is sufficiently full
 		const currentBufferLevelSeconds = getCurrentBufferLevel(videoElement);
-		// Only start waiting if we are not at the very beginning of main playback
 		if (
-			segmentIndex > 0 &&
 			currentBufferLevelSeconds >=
-				FILL_THRESHOLD_SEGMENTS * typicalSegmentDuration
+			FILL_THRESHOLD_SEGMENTS * typicalSegmentDuration
 		) {
-			console.log(
-				`⏸️ Buffer level (${currentBufferLevelSeconds.toFixed(
-					2,
-				)}s) is above threshold (${(
-					FILL_THRESHOLD_SEGMENTS * typicalSegmentDuration
-				).toFixed(2)}s). Waiting for playback to consume.`,
-			);
 			await new Promise((resolve) => {
 				const checkBuffer = () => {
-					const newBufferLevel = getCurrentBufferLevel(videoElement);
 					if (
-						newBufferLevel <
+						getCurrentBufferLevel(videoElement) <
 						FILL_THRESHOLD_SEGMENTS * typicalSegmentDuration
 					) {
-						console.log(
-							`▶️ Resuming: Buffer dropped to ${newBufferLevel.toFixed(2)}s.`,
-						);
 						resolve();
 					} else {
-						setTimeout(checkBuffer, 500); // Check every 500ms
+						setTimeout(checkBuffer, 500);
 					}
 				};
 				checkBuffer();
 			});
 		}
-		// --- END NEW BUFFER MANAGEMENT LOGIC ---
 
 		try {
-			const selectedResolution = await BOLA_Algorithm(
-				// Call the imported BOLA function
+			const segment = segmentList[segmentIndex];
+
+			const selectedResolution = await BOLA(
 				videoId,
 				videoElement,
 				segment,
@@ -213,9 +213,17 @@ async function startMainPlayback(
 				totalDuration,
 				lastSelectedResolution,
 				lastBandwidth,
-				segmentIndex === 0 ? placeholderBuffer.buffer : null, // placeholderBuffer.buffer is in SECONDS
-				typicalSegmentDuration, // Pass typicalSegmentDuration to BOLA
+				null,
+				typicalSegmentDuration,
 			);
+
+			console.log(
+				`📽️ Segment ${segmentIndex} - Chosen resolution: ${selectedResolution}`,
+			);
+
+			// update resolution early
+			const previousResolution = lastSelectedResolution;
+			lastSelectedResolution = selectedResolution;
 
 			const downloadStart = performance.now();
 			const segmentData = await getVideoSegment(
@@ -226,7 +234,7 @@ async function startMainPlayback(
 			const downloadEnd = performance.now();
 
 			if (!segmentData) {
-				console.warn(`❌ Segment ${segment.name} not found.`);
+				console.warn("❌ Segment data is null, skipping...");
 				segmentIndex++;
 				appendNextSegment();
 				return;
@@ -234,76 +242,98 @@ async function startMainPlayback(
 
 			const sizeMB = segmentData.byteLength / (1024 * 1024);
 			const downloadTime = Math.max((downloadEnd - downloadStart) / 1000, 0.05);
+			const measuredBandwidth = sizeMB / downloadTime;
+			lastBandwidth =
+				lastBandwidth === null
+					? measuredBandwidth
+					: BANDWIDTH_ALPHA * measuredBandwidth +
+					  (1 - BANDWIDTH_ALPHA) * lastBandwidth;
 
-			const currentInstantaneousBandwidth = sizeMB / downloadTime;
-			if (lastBandwidth === null) {
-				lastBandwidth = currentInstantaneousBandwidth;
-			} else {
-				lastBandwidth =
-					BANDWIDTH_ALPHA * currentInstantaneousBandwidth +
-					(1 - BANDWIDTH_ALPHA) * lastBandwidth;
-			}
+			console.log(`📡 Bandwidth: ${lastBandwidth.toFixed(2)} MBps`);
 
-			sourceBuffer.addEventListener(
-				"updateend",
-				function onUpdateEnd() {
-					sourceBuffer.removeEventListener("updateend", onUpdateEnd);
-					lastSelectedResolution = selectedResolution;
-					segmentIndex++;
-					appendNextSegment();
-				},
-				{ once: true },
-			);
-
-			if (selectedResolution !== lastSelectedResolution) {
+			if (selectedResolution !== previousResolution) {
 				const newInit = await getInitFile(videoId, selectedResolution);
-				sourceBuffer.addEventListener(
-					"updateend",
-					function onInitAppended() {
-						sourceBuffer.removeEventListener("updateend", onInitAppended);
-						sourceBuffer.appendBuffer(segmentData);
-					},
-					{ once: true },
-				);
-				sourceBuffer.appendBuffer(newInit);
-			} else {
-				sourceBuffer.appendBuffer(segmentData);
+				await new Promise((resolve) => {
+					sourceBuffer.addEventListener("updateend", resolve, { once: true });
+					sourceBuffer.appendBuffer(newInit);
+				});
 			}
+
+			await new Promise((resolve) => {
+				sourceBuffer.addEventListener("updateend", resolve, { once: true });
+				sourceBuffer.appendBuffer(segmentData);
+			});
+
+			segmentIndex++;
+			appendNextSegment();
 		} catch (err) {
-			console.error("❌ Error fetching segment:", err);
+			console.error("❌ Segment fetch error:", err);
 			segmentIndex++;
 			appendNextSegment();
 		}
 	};
 
-	sourceBuffer.addEventListener(
-		"updateend",
-		function onMainInitReady() {
-			sourceBuffer.removeEventListener("updateend", onMainInitReady);
-			appendNextSegment();
-		},
-		{ once: true },
-	);
+	const handleSeek = async () => {
+		if (isSeeking || sourceBuffer.updating) return;
+		const seekTime = videoElement.currentTime;
+		console.log(`⚡ Seek to ${seekTime.toFixed(2)}s`);
 
-	sourceBuffer.appendBuffer(initSegment);
-
-	const waitUntilBuffered = () => {
-		const bufferLevel = getCurrentBufferLevel(videoElement);
-		if (bufferLevel >= 4) {
-			videoElement
-				.play()
-				.then(() => {
-					videoElement.muted = false; // Unmute for autoplay
-					console.log("Autoplay worked with sound.");
-				})
-				.catch((err) => {
-					console.warn("Autoplay with sound failed, retrying with mute:", err);
-					videoElement.muted = false;
-					videoElement.play();
-				});
-		} else {
-			setTimeout(waitUntilBuffered, 500);
+		if (seekTime < introDuration) {
+			console.log("⏩ Seek within intro, ignoring.");
+			return;
 		}
+
+		for (let i = 0; i < videoElement.buffered.length; i++) {
+			if (
+				seekTime >= videoElement.buffered.start(i) &&
+				seekTime < videoElement.buffered.end(i)
+			) {
+				console.log("Seeked time already buffered.");
+				return;
+			}
+		}
+
+		isSeeking = true;
+		const targetTime = seekTime - introDuration;
+		const newSegmentIndex = findSegmentIndexForTime(targetTime, segmentList);
+		segmentIndex = newSegmentIndex;
+
+		let placeholderBuffer = await getPlaceholderBuffer(
+			videoId,
+			resolutionList,
+			segmentList,
+		);
+
+		sourceBuffer.remove(introDuration, mediaSource.duration);
+		await new Promise((resolve) =>
+			sourceBuffer.addEventListener("updateend", resolve, { once: true }),
+		);
+
+		const initSeg = await getInitFile(
+			videoId,
+			placeholderBuffer.startupResolution,
+		);
+		await new Promise((resolve) => {
+			sourceBuffer.addEventListener("updateend", resolve, { once: true });
+			sourceBuffer.appendBuffer(initSeg);
+		});
+
+		isSeeking = false;
+		appendNextSegment();
 	};
-	waitUntilBuffered();
+
+	videoElement.addEventListener("seeking", handleSeek);
+
+	// Start playback
+	sourceBuffer.addEventListener("updateend", appendNextSegment, { once: true });
+	sourceBuffer.appendBuffer(initSegment);
+}
+
+function findSegmentIndexForTime(targetTime, segments) {
+	let accumulated = 0;
+	for (let i = 0; i < segments.length; i++) {
+		accumulated += segments[i].duration;
+		if (targetTime < accumulated) return i;
+	}
+	return segments.length - 1;
 }

@@ -10,7 +10,7 @@ const nextConfig = {
 	},
 	images: {
 		domains: [
-			"localhost",
+			"localhost:8000",
 			"image.tmdb.org",
 			"www.themoviedb.org",
 			"i.imgur.com",
