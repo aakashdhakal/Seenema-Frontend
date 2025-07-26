@@ -113,7 +113,7 @@ export function getAvailableResolutions(manifestText) {
 
 export async function getVideoData(videoId) {
 	try {
-		const res = await axios.get(`/video/${videoId}`);
+		const res = await axios.get(`/getVideoById/${videoId}`);
 		return res.data;
 	} catch (err) {
 		console.error("Error fetching video data:", err);
@@ -178,8 +178,9 @@ export async function getIntroManifest(resolution) {
 
 export async function updateWatchHistory(videoId, currentDuration) {
 	try {
-		const res = await axios.post(`/updateWatchHistory/${videoId}`, {
-			currentDuration,
+		const res = await axios.post(`/updateWatchHistory`, {
+			videoId,
+			currentTime: currentDuration,
 		});
 		return res.data;
 	} catch (err) {
@@ -222,4 +223,14 @@ export async function deleteVideo(videoId) {
 		console.error("Error deleting video:", err);
 		return null;
 	}
+}
+
+export function formatDuration(seconds) {
+	if (seconds < 0) return "00:00:00";
+	const hours = Math.floor(seconds / 3600);
+	const minutes = Math.floor((seconds % 3600) / 60);
+	const secs = Math.floor(seconds % 60);
+	return `${hours.toString().padStart(2, "0")}:${minutes
+		.toString()
+		.padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }

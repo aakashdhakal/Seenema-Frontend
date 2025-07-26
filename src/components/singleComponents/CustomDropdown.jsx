@@ -36,12 +36,8 @@ export default function CustomDropdown({
 					size={size}
 					disabled={disabled}
 					className={`text-white hover:text-primary hover:bg-white/10 ${className}`}>
-					{placeholder && (
-						<span className="text-sm text-muted-foreground">
-							{placeholder ? placeholder : "Select an option"}
-						</span>
-					)}
-					{icon && <Icon icon={icon} className="h-4 w-4" />}
+					{icon && <Icon icon={icon} className="mr-2 h-4 w-4" />}
+					<span className="text-sm">{selectedOption || placeholder}</span>
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent

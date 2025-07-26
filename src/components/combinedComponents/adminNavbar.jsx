@@ -19,13 +19,16 @@ import { useAuthContext } from "@/context/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import UserAvatar from "../singleComponents/UserAvatar";
 import { useTheme } from "next-themes";
+import echo from "@/lib/echo";
+import { toast } from "sonner";
 
 export default function AdminNavbar() {
 	const [mounted, setMounted] = useState(false);
 	const [notifications, setNotifications] = useState([]);
-	const [unreadCount, setUnreadCount] = useState(3);
+	const [unreadCount, setUnreadCount] = useState(0);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [isSearchFocused, setIsSearchFocused] = useState(false);
+	const [connectionStatus, setConnectionStatus] = useState("disconnected");
 	const router = useRouter();
 	const pathname = usePathname();
 	const { user, logout, loading } = useAuthContext();
@@ -57,11 +60,6 @@ export default function AdminNavbar() {
 				subtitle: "Manage user accounts",
 				icon: "solar:users-group-two-rounded-bold-duotone",
 			},
-			analytics: {
-				title: "Analytics & Reports",
-				subtitle: "View system insights",
-				icon: "solar:chart-2-bold-duotone",
-			},
 			settings: {
 				title: "System Settings",
 				subtitle: "Configure system preferences",
@@ -87,50 +85,188 @@ export default function AdminNavbar() {
 	const handleSearch = (e) => {
 		e.preventDefault();
 		if (searchQuery.trim()) {
-			// Implement search functionality here
 			console.log("Searching for:", searchQuery);
 		}
 	};
 
-	// Mock notifications
+	// Setup Laravel Reverb notifications
 	useEffect(() => {
 		setMounted(true);
-		setNotifications([
-			{
-				id: 1,
-				title: "New user registration",
-				message: "John Doe has registered",
-				time: "2 min ago",
-				type: "user",
-				read: false,
-				icon: "solar:user-plus-bold-duotone",
-			},
-			{
-				id: 2,
-				title: "Content report",
-				message: "Inappropriate content reported",
-				time: "15 min ago",
-				type: "report",
-				read: false,
-				icon: "solar:flag-bold-duotone",
-			},
-			{
-				id: 3,
-				title: "System update",
-				message: "Server maintenance completed",
-				time: "1 hour ago",
-				type: "system",
-				read: true,
-				icon: "solar:server-bold-duotone",
-			},
-		]);
-	}, []);
+
+		// Only setup notifications if user is authenticated
+		if (!user?.user?.id) return;
+
+		console.log("Setting up Reverb notifications for user:", user.user.id);
+
+		// Listen for connection events
+		if (echo.connector?.pusher?.connection) {
+			echo.connector.pusher.connection.bind("connected", () => {
+				console.log("Reverb connected successfully");
+				setConnectionStatus("connected");
+			});
+
+			echo.connector.pusher.connection.bind("disconnected", () => {
+				console.log("Reverb disconnected");
+				setConnectionStatus("disconnected");
+			});
+
+			echo.connector.pusher.connection.bind("error", (error) => {
+				console.error("Reverb connection error:", error);
+				setConnectionStatus("error");
+			});
+		}
+
+		// Listen for admin notifications
+		const adminChannel = echo
+			.private("admin.notifications")
+			.listen(".video.processing.status", (data) => {
+				//update status of video 
+				
+			})
+			.error((error) => {
+				console.error("Admin channel error:", error);
+			});
+
+		// Cleanup function
+		return () => {
+			if (adminChannel) {
+				adminChannel.stopListening(".video.processing.status");
+			}
+			echo.leaveChannel("admin.notifications");
+			if (user.user.role === "admin") {
+				echo.leaveChannel(`user.${user.user.id}`);
+			}
+		};
+	}, [user?.user?.id]);
+
+	const handleNotification = (data, source) => {
+		const notification = {
+			id: `${source}-${data.video_id}-${Date.now()}`,
+			type: "video_processing",
+			title: getNotificationTitle(data.status),
+			message: data.message || `${data.video_title} - ${data.status}`,
+			videoId: data.video_id,
+			videoTitle: data.video_title,
+			status: data.status,
+			progress: data.progress || 0,
+			timestamp: data.timestamp || new Date().toISOString(),
+			time: new Date().toLocaleTimeString(),
+			read: false,
+			icon: getNotificationIcon(data.status),
+		};
+
+		// Add to notifications list (avoid duplicates)
+		setNotifications((prev) => {
+			const exists = prev.some((n) => n.id === notification.id);
+			if (!exists) {
+				// Only increment unread count for new notifications
+				setUnreadCount((count) => count + 1);
+				return [notification, ...prev.slice(0, 19)]; // Keep only last 20
+			}
+			return prev;
+		});
+
+		// Show toast notification
+		showToast(notification);
+	};
+
+	const getNotificationTitle = (status) => {
+		switch (status) {
+			case "processing":
+				return "🔄 Video Processing";
+			case "ready":
+				return "✅ Video Ready!";
+			case "failed":
+				return "❌ Processing Failed";
+			default:
+				return "📹 Video Update";
+		}
+	};
+
+	const getNotificationIcon = (status) => {
+		switch (status) {
+			case "processing":
+				return "solar:refresh-bold-duotone";
+			case "ready":
+				return "solar:check-circle-bold-duotone";
+			case "failed":
+				return "solar:close-circle-bold-duotone";
+			default:
+				return "solar:videocamera-record-bold-duotone";
+		}
+	};
+
+	const getNotificationColor = (status) => {
+		switch (status) {
+			case "processing":
+				return "bg-blue-100 text-blue-600";
+			case "ready":
+				return "bg-green-100 text-green-600";
+			case "failed":
+				return "bg-red-100 text-red-600";
+			default:
+				return "bg-gray-100 text-gray-600";
+		}
+	};
+
+	const showToast = (notification) => {
+		switch (notification.status) {
+			case "ready":
+				toast.success(notification.title, {
+					description: notification.message,
+					duration: 5000,
+					action: {
+						label: "View Video",
+						onClick: () => router.push(`/admin/videos/${notification.videoId}`),
+					},
+				});
+				break;
+			case "failed":
+				toast.error(notification.title, {
+					description: notification.message,
+					duration: 7000,
+				});
+				break;
+			case "processing":
+				toast.info(notification.title, {
+					description: notification.message,
+					duration: 3000,
+				});
+				break;
+		}
+	};
 
 	const markAsRead = (id) => {
 		setNotifications((prev) =>
 			prev.map((notif) => (notif.id === id ? { ...notif, read: true } : notif)),
 		);
-		setUnreadCount((prev) => Math.max(0, prev - 1));
+		const notification = notifications.find((n) => n.id === id);
+		if (notification && !notification.read) {
+			setUnreadCount((prev) => Math.max(0, prev - 1));
+		}
+	};
+
+	const markAllAsRead = () => {
+		const unreadNotifications = notifications.filter((n) => !n.read);
+		setNotifications((prev) => prev.map((notif) => ({ ...notif, read: true })));
+		setUnreadCount(0);
+	};
+
+	const clearAllNotifications = () => {
+		setNotifications([]);
+		setUnreadCount(0);
+	};
+
+	const formatTimeAgo = (timestamp) => {
+		const now = new Date();
+		const time = new Date(timestamp);
+		const diffInSeconds = Math.floor((now - time) / 1000);
+
+		if (diffInSeconds < 60) return "Just now";
+		if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+		if (diffInSeconds < 86400)
+			return `${Math.floor(diffInSeconds / 3600)}h ago`;
+		return `${Math.floor(diffInSeconds / 86400)}d ago`;
 	};
 
 	if (!mounted) return null;
@@ -151,11 +287,28 @@ export default function AdminNavbar() {
 								{pageInfo.title}
 							</h1>
 						</div>
+						{/* Connection Status Indicator */}
+						{process.env.NODE_ENV === "development" && (
+							<div className="flex items-center gap-1">
+								<div
+									className={`w-2 h-2 rounded-full ${
+										connectionStatus === "connected"
+											? "bg-green-500"
+											: connectionStatus === "error"
+											? "bg-red-500"
+											: "bg-yellow-500"
+									}`}
+								/>
+								<span className="text-xs text-muted-foreground">
+									{connectionStatus}
+								</span>
+							</div>
+						)}
 					</div>
 				</div>
 
 				{/* Search Bar */}
-				<div className="hidden md:flex w-full max-w-sm">
+				<div className="hidden md:flex w-full max-w-sm border-2 rounded-md">
 					<form onSubmit={handleSearch} className="relative w-full">
 						<Icon
 							icon="solar:magnifer-bold-duotone"
@@ -179,7 +332,7 @@ export default function AdminNavbar() {
 								size="sm"
 								className="absolute right-2 top-1/2 h-6 w-6 -translate-y-1/2 p-0 hover:bg-transparent"
 								onClick={() => setSearchQuery("")}>
-								<Icon icon="solar:close-circle-bold" className="h-3 w-3" />
+								<Icon icon="radix-icons:cross-2" className="h-3 w-3" />
 							</Button>
 						)}
 					</form>
@@ -192,11 +345,12 @@ export default function AdminNavbar() {
 						<Icon icon="solar:magnifer-bold-duotone" className="h-4 w-4" />
 						<span className="sr-only">Search</span>
 					</Button>
-					{/* dark node toggle */}
+
+					{/* Dark mode toggle */}
 					<Button
 						variant="ghost"
 						size="icon"
-						className="h-9 w-9  lg:flex items-center justify-center"
+						className="h-9 w-9 lg:flex items-center justify-center"
 						onClick={() => {
 							setTheme(theme === "dark" ? "light" : "dark");
 						}}>
@@ -206,7 +360,7 @@ export default function AdminNavbar() {
 
 					{/* Notifications */}
 					<DropdownMenu>
-						<DropdownMenuTrigger className={"cursor-pointer"} asChild>
+						<DropdownMenuTrigger className="cursor-pointer" asChild>
 							<Button variant="ghost" size="icon" className="relative h-9 w-9">
 								<Icon icon="solar:bell-bold-duotone" className="h-4 w-4" />
 								{unreadCount > 0 && (
@@ -220,11 +374,31 @@ export default function AdminNavbar() {
 						<DropdownMenuContent align="end" className="w-80">
 							<DropdownMenuLabel className="flex items-center justify-between">
 								<span>Notifications</span>
-								{unreadCount > 0 && (
-									<Badge variant="secondary" className="text-xs">
-										{unreadCount} new
-									</Badge>
-								)}
+								<div className="flex items-center gap-2">
+									{unreadCount > 0 && (
+										<Badge variant="secondary" className="text-xs">
+											{unreadCount} new
+										</Badge>
+									)}
+									{notifications.length > 0 && (
+										<div className="flex gap-1">
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={markAllAsRead}
+												className="h-6 px-2 text-xs">
+												Mark all read
+											</Button>
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={clearAllNotifications}
+												className="h-6 px-2 text-xs text-red-600 hover:text-red-700">
+												Clear all
+											</Button>
+										</div>
+									)}
+								</div>
 							</DropdownMenuLabel>
 							<DropdownMenuSeparator />
 							<div className="max-h-80 overflow-y-auto">
@@ -233,15 +407,16 @@ export default function AdminNavbar() {
 										<DropdownMenuItem
 											key={notification.id}
 											className="flex items-start gap-3 p-3 cursor-pointer"
-											onClick={() => markAsRead(notification.id)}>
+											onClick={() => {
+												markAsRead(notification.id);
+												if (notification.videoId) {
+													router.push(`/admin/videos/${notification.videoId}`);
+												}
+											}}>
 											<div
-												className={`flex-shrink-0 p-2 rounded-full ${
-													notification.type === "user"
-														? "bg-blue-100 text-blue-600"
-														: notification.type === "report"
-														? "bg-red-100 text-red-600"
-														: "bg-green-100 text-green-600"
-												}`}>
+												className={`flex-shrink-0 p-2 rounded-full ${getNotificationColor(
+													notification.status,
+												)}`}>
 												<Icon icon={notification.icon} className="h-4 w-4" />
 											</div>
 											<div className="flex-1 min-w-0">
@@ -253,40 +428,63 @@ export default function AdminNavbar() {
 														<div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
 													)}
 												</div>
-												<p className="text-xs text-muted-foreground mt-1">
+												<p className="text-xs text-muted-foreground mt-1 line-clamp-2">
 													{notification.message}
 												</p>
+												{notification.status === "processing" &&
+													notification.progress > 0 && (
+														<div className="mt-2">
+															<div className="w-full bg-gray-200 rounded-full h-1.5">
+																<div
+																	className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+																	style={{
+																		width: `${notification.progress}%`,
+																	}}></div>
+															</div>
+															<p className="text-xs text-muted-foreground mt-1">
+																{notification.progress}% complete
+															</p>
+														</div>
+													)}
 												<p className="text-xs text-muted-foreground mt-1">
-													{notification.time}
+													{formatTimeAgo(notification.timestamp)}
 												</p>
 											</div>
 										</DropdownMenuItem>
 									))
 								) : (
 									<div className="p-4 text-center text-sm text-muted-foreground">
-										No notifications
+										No notifications yet
 									</div>
 								)}
 							</div>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem className="text-center justify-center p-2">
-								<Button variant="ghost" size="sm" className="w-full">
-									View all notifications
-								</Button>
-							</DropdownMenuItem>
+							{notifications.length > 10 && (
+								<>
+									<DropdownMenuSeparator />
+									<DropdownMenuItem className="text-center justify-center p-2">
+										<Button
+											variant="ghost"
+											size="sm"
+											className="w-full"
+											onClick={() => router.push("/admin/notifications")}>
+											View all notifications
+										</Button>
+									</DropdownMenuItem>
+								</>
+							)}
 						</DropdownMenuContent>
 					</DropdownMenu>
 
 					{/* User Profile */}
 					<DropdownMenu>
-						<DropdownMenuTrigger className={"w-8 h8 rounded-full"} asChild>
+						<DropdownMenuTrigger className="w-8 h-8 rounded-full" asChild>
 							<Button variant="ghost" className="relative w-min h-min p-0">
 								{loading ? (
 									<Skeleton className="h-8 w-8 rounded-full" />
 								) : (
 									<UserAvatar
-										src={user.user.profile_picture}
-										fallback={user.user.name?.charAt(0).toUpperCase() || "U"}
+										src={user?.user?.profile_picture}
+										fallback={user?.user?.name?.charAt(0).toUpperCase() || "U"}
 									/>
 								)}
 							</Button>

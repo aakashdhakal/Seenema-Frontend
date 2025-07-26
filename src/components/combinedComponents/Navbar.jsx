@@ -35,17 +35,22 @@ export default function Navbar() {
 		{
 			href: "/home",
 			label: "Home",
-			icon: "fluent:home-28-regular",
-		},
-		{
-			href: "/shows",
-			label: "TV Shows",
-			icon: "solar:tv-linear",
+			icon: "flowbite:home-solid",
 		},
 		{
 			href: "/movies",
 			label: "Movies",
-			icon: "ic:outline-movie",
+			icon: "fluent:movies-and-tv-24-filled",
+		},
+		{
+			href: "/genres",
+			label: "Genres",
+			icon: "iconamoon:category-fill",
+		},
+		{
+			href: "/watchlist",
+			label: "My List",
+			icon: "fluent:bookmark-multiple-20-filled",
 		},
 	];
 
@@ -59,16 +64,22 @@ export default function Navbar() {
 					: "bg-gradient-to-b from-background/80 to-transparent"
 			}`}>
 			<div className="container mx-auto px-4 sm:px-6 lg:px-8">
-				<nav className="flex items-center justify-between h-20">
+				<nav className="flex items-center justify-between h-16">
 					{/* Logo */}
 					<Link href="/home" className="flex items-center space-x-2">
 						<div className="flex items-center">
-							<Image src="/3.png" alt="Seenema Logo" width={150} height={50} />
+							<Image
+								src="/3.png"
+								alt="Seenema Logo"
+								width={120}
+								height={50}
+								className="h-10 w-auto"
+							/>
 						</div>
 					</Link>
 
 					{/* Desktop Navigation Links */}
-					<div className="hidden md:flex items-center space-x-8">
+					<div className="hidden md:flex items-center space-x-1">
 						{navLinks.map((link) => {
 							const isActive = pathname === link.href;
 
@@ -76,70 +87,62 @@ export default function Navbar() {
 								<Link
 									key={link.href}
 									href={link.href}
-									className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 group ${
+									className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium ${
 										isActive
 											? "text-primary bg-primary/10"
-											: "text-foreground/80 hover:text-foreground hover:bg-accent"
+											: "text-foreground/70 hover:text-foreground hover:bg-accent/50"
 									}`}>
 									<Icon
 										icon={link.icon}
-										className={`w-4 h-4 transition-transform group-hover:scale-110 ${
-											isActive ? "text-primary" : "text-foreground/80"
+										className={`w-4 h-4 ${
+											isActive ? "text-primary" : "text-foreground/70"
 										}`}
 									/>
-									<span className="text-sm font-medium">{link.label}</span>
+									<span>{link.label}</span>
 								</Link>
 							);
 						})}
 					</div>
 
-					{/* Right Side: Search, Notifications, Profile */}
-					<div className="flex items-center space-x-3">
+					{/* Right Side: Search, Profile, Menu */}
+					<div className="flex items-center space-x-2">
 						{/* Search Button */}
 						<Button
 							variant="ghost"
-							size="icon"
-							className="text-foreground/80 hover:text-foreground hover:bg-accent transition-colors">
-							<Icon icon="solar:magnifer-bold-duotone" className="w-5 h-5" />
+							size="sm"
+							className="text-foreground/70 hover:text-foreground hover:bg-accent/50 transition-colors">
+							<Icon icon="solar:magnifer-bold-duotone" className="w-4 h-4" />
 							<span className="sr-only">Search</span>
-						</Button>
-
-						{/* Notifications */}
-						<Button
-							variant="ghost"
-							size="icon"
-							className="text-foreground/80 hover:text-foreground hover:bg-accent transition-colors relative">
-							<Icon icon="solar:bell-bold-duotone" className="w-5 h-5" />
-							{/* Notification dot */}
-							<div className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full border-2 border-background"></div>
-							<span className="sr-only">Notifications</span>
-						</Button>
-
-						{/* logout btn */}
-						<Button
-							variant="ghost"
-							size="icon"
-							onClick={() => logout()}
-							className="text-foreground/80 hover:text-foreground hover:bg-accent transition-colors">
-							<Icon icon="solar:logout-bold-duotone" className="w-5 h-5" />
-							<span className="sr-only">Logout</span>
 						</Button>
 
 						{/* User Avatar with Loading State */}
 						{loading || !user ? (
-							<Skeleton className="h-10 w-10 rounded-full" />
+							<Skeleton className="h-8 w-8 rounded-full" />
 						) : (
-							<UserAvatar
-								src={user.user.profile_picture}
-								fallback={user.user.name?.charAt(0).toUpperCase() || "U"}
-							/>
+							<div className="flex items-center space-x-2">
+								<UserAvatar
+									src={user.user.profile_picture}
+									fallback={user.user.name?.charAt(0).toUpperCase() || "U"}
+									className="h-8 w-8"
+								/>
+
+								{/* User Menu Button (Desktop) */}
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => logout()}
+									className="hidden md:flex text-foreground/70 hover:text-foreground hover:bg-accent/50 transition-colors">
+									<Icon icon="solar:logout-bold-duotone" className="w-4 h-4" />
+									<span className="sr-only">Logout</span>
+								</Button>
+							</div>
 						)}
 
 						{/* Mobile Menu Button */}
 						<Button
 							variant="ghost"
-							size="icon"
-							className="md:hidden text-foreground/80 hover:text-foreground hover:bg-accent transition-colors"
+							size="sm"
+							className="md:hidden text-foreground/70 hover:text-foreground hover:bg-accent/50 transition-colors"
 							onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
 							<Icon
 								icon={
@@ -147,7 +150,7 @@ export default function Navbar() {
 										? "solar:close-square-bold-duotone"
 										: "solar:hamburger-menu-bold-duotone"
 								}
-								className="w-5 h-5"
+								className="w-4 h-4"
 							/>
 							<span className="sr-only">Toggle menu</span>
 						</Button>
@@ -168,19 +171,34 @@ export default function Navbar() {
 										className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
 											isActive
 												? "text-primary bg-primary/10 border-l-4 border-primary"
-												: "text-foreground/80 hover:text-foreground hover:bg-accent"
+												: "text-foreground/70 hover:text-foreground hover:bg-accent/50"
 										}`}
 										onClick={() => setIsMobileMenuOpen(false)}>
 										<Icon
 											icon={link.icon}
 											className={`w-5 h-5 ${
-												isActive ? "text-primary" : "text-foreground/80"
+												isActive ? "text-primary" : "text-foreground/70"
 											}`}
 										/>
 										<span className="text-base font-medium">{link.label}</span>
 									</Link>
 								);
 							})}
+
+							{/* Mobile Logout */}
+							<Button
+								variant="ghost"
+								onClick={() => {
+									logout();
+									setIsMobileMenuOpen(false);
+								}}
+								className="w-full justify-start text-foreground/70 hover:text-foreground hover:bg-accent/50 transition-colors px-3 py-3">
+								<Icon
+									icon="solar:logout-bold-duotone"
+									className="w-5 h-5 mr-3"
+								/>
+								<span className="text-base font-medium">Logout</span>
+							</Button>
 						</div>
 					</div>
 				)}

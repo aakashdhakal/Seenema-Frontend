@@ -7,11 +7,19 @@ const fetcher = (url) => axios.get(url).then((res) => res.data);
 
 // Helper to call /sanctum/csrf-cookie (CSRF token gets auto-handled by axios)
 export const getCSRFToken = async () => {
-	await axios.get("/sanctum/csrf-cookie");
+	await axios.get("http://localhost:8000/sanctum/csrf-cookie");
 };
 
 export const useAuth = () => {
-	const { data: user, error, isLoading, mutate } = useSWR("/user", fetcher);
+	const {
+		data: user,
+		error,
+		isLoading,
+		mutate,
+	} = useSWR("/user", fetcher, {
+		revalidateOnFocus: false, // don't re-fetch on focus
+		revalidateOnReconnect: true, // don't re-fetch on reconnect
+	});
 
 	const login = async ({ email, password }) => {
 		await getCSRFToken(); // this triggers Laravel to send back CSRF token in cookie
@@ -43,7 +51,7 @@ export const useAuth = () => {
 		await getCSRFToken();
 
 		try {
-			const res = await axios.post("/api/email/verification-notification");
+			const res = await axios.post("/email/verification-notification");
 			if (res.status === 200) {
 				return res.data;
 			} else {

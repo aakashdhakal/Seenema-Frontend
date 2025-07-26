@@ -82,8 +82,9 @@
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
 
-  --border: #e2e8f0;
-  --input: #ffffff;
+  /* Make border darker and more visible in light mode */
+  --border: #d1d5db;
+  --input: #e7e7e7;
   --ring: #008246;
 
   --chart-1: #008246;
@@ -98,7 +99,8 @@
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f1f5f9;
   --sidebar-accent-foreground: #0f0f0f;
-  --sidebar-border: #e2e8f0;
+  /* Make sidebar border more visible too */
+  --sidebar-border: #d1d5db;
   --sidebar-ring: #008246;
 }
 
@@ -389,12 +391,12 @@ input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
   -webkit-box-shadow: 0 0 0 30px hsl(var(--input)) inset !important;
-  -webkit-text-fill-color: hsl(var(--foreground)) !important;
+  -webkit-text-fill-color: #ffffff !important;
   transition: background-color 5000s ease-in-out 0s;
 }
 
 input:-webkit-autofill::first-line {
-  color: hsl(var(--foreground)) !important;
+  color: #ffffff !important;
 }
 
 /* Custom transparent range slider */

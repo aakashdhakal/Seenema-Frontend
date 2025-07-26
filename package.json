@@ -7,8 +7,7 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
-		"backend": "cd ../backend && php artisan serve && php artisan queue:work --tries=3 --timeout=60",
-		"suru": "npm-run-all --parallel backend dev"
+		"suru": "concurrently -c \"#0ea5e9,#fb923c,#facc15,#4ade80\" --names \"NEXTJS,LARAVEL,QUEUE,REVERB\" \"npm:dev\" \"cd ../backend && php artisan serve\" \"cd ../backend && php artisan queue:work\" \"cd ../backend && php artisan reverb:start\""
 	},
 	"dependencies": {
 		"@hookform/resolvers": "^5.1.1",
@@ -67,6 +66,7 @@
 		"@eslint/js": "^9.30.1",
 		"@iconify/react": "^6.0.0",
 		"@tailwindcss/postcss": "^4",
+		"concurrently": "^9.2.0",
 		"eslint": "^9.30.1",
 		"eslint-config-next": "15.3.1",
 		"eslint-plugin-react": "^7.37.5",

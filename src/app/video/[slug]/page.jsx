@@ -10,181 +10,123 @@ import { Icon } from "@iconify/react";
 import Image from "next/image";
 import Navbar from "@/components/combinedComponents/Navbar";
 import PageLoadingComponent from "@/components/combinedComponents/PageLoadingComponent";
+import { useAuthContext } from "@/context/AuthContext";
+import axios from "@/lib/axios";
 
 export default function VideoDetailsPage() {
 	const { slug } = useParams();
 	const router = useRouter();
+	const { user, isLoading: authLoading } = useAuthContext();
 	const [mounted, setMounted] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
 	const [videoData, setVideoData] = useState(null);
 	const [activeTab, setActiveTab] = useState("overview");
+	const [error, setError] = useState(null);
+
+	// Helper function to format duration
+	const formatDuration = (seconds) => {
+		if (!seconds) return "Unknown";
+		const hours = Math.floor(seconds / 3600);
+		const minutes = Math.floor((seconds % 3600) / 60);
+		if (hours > 0) {
+			return `${hours}h ${minutes}m`;
+		}
+		return `${minutes}m`;
+	};
+
+	// Helper function to get quality badge
+	const getQualityFromResolutions = (resolutions) => {
+		if (!resolutions || !Array.isArray(resolutions)) return "HD";
+		if (resolutions.includes("1080p")) return "4K";
+		if (resolutions.includes("720p")) return "HD";
+		return "SD";
+	};
 
 	useEffect(() => {
 		setMounted(true);
-		// Simulate loading
-		setTimeout(() => {
-			setIsLoading(false);
-		}, 1000);
 	}, []);
 
-	// Mock video data - replace with actual API call
+	// Redirect to login if not authenticated
 	useEffect(() => {
-		if (slug) {
-			const mockData = {
-				id: slug,
-				title: "Stranger Things",
-				year: "2016-2025",
-				rating: "8.7",
-				duration: "4 Seasons",
-				genre: ["Sci-Fi", "Drama", "Horror", "Thriller"],
-				maturityRating: "TV-14",
-				description:
-					"When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces, and one strange little girl. Set in 1980s Indiana, this supernatural thriller follows the adventures of a group of friends as they encounter government conspiracies and supernatural entities from an alternate dimension known as the Upside Down.",
-				longDescription:
-					"In the fictional town of Hawkins, Indiana, during the 1980s, a secret government laboratory conducting experiments accidentally opens a portal to an alternate dimension referred to as the 'Upside Down'. The influence of the Upside Down starts to affect the unknowing residents of Hawkins in calamitous ways. When twelve-year-old Will Byers goes missing, his mother Joyce and the town's police chief Jim Hopper begin their own investigation into his disappearance. At the same time, a young psychokinetic girl called Eleven escapes from the laboratory and assists Will's friends Mike, Dustin, and Lucas in their own search.",
-				cast: [
-					{
-						name: "Millie Bobby Brown",
-						character: "Eleven",
-						image:
-							"https://image.tmdb.org/t/p/w200/qpTZOI5cEGPoUb6IpBMsCpQQ7kY.jpg",
-					},
-					{
-						name: "Finn Wolfhard",
-						character: "Mike Wheeler",
-						image:
-							"https://image.tmdb.org/t/p/w200/sNuNaREJKFrgYFyB7iVqhTrvxUD.jpg",
-					},
-					{
-						name: "David Harbour",
-						character: "Jim Hopper",
-						image:
-							"https://image.tmdb.org/t/p/w200/chPekukMF5TNVIoRmHnKKVkUjkF.jpg",
-					},
-					{
-						name: "Winona Ryder",
-						character: "Joyce Byers",
-						image:
-							"https://image.tmdb.org/t/p/w200/zjhg1Y9SRNeJt1FzjvQSbQOPNVk.jpg",
-					},
-					{
-						name: "Gaten Matarazzo",
-						character: "Dustin Henderson",
-						image:
-							"https://image.tmdb.org/t/p/w200/x5nL3IKhvFDYkVNdkJGjJsZUhwN.jpg",
-					},
-					{
-						name: "Caleb McLaughlin",
-						character: "Lucas Sinclair",
-						image:
-							"https://image.tmdb.org/t/p/w200/2dITdACoANaPEShKaVy0jEb9T4c.jpg",
-					},
-				],
-				crew: [
-					{
-						name: "The Duffer Brothers",
-						role: "Creators & Executive Producers",
-					},
-					{ name: "Shawn Levy", role: "Executive Producer & Director" },
-					{ name: "Dan Cohen", role: "Executive Producer" },
-					{ name: "Iain Paterson", role: "Executive Producer" },
-				],
-				backdrop:
-					"https://image.tmdb.org/t/p/original/56v2KjBlU4XaOv9rVYEQypROD7P.jpg",
-				poster:
-					"https://image.tmdb.org/t/p/w500/49WJfeN0moxb9IPfGn8AIqMGskD.jpg",
-				trailer: "https://www.youtube.com/watch?v=b9EkMc79ZSU",
-				awards: [
-					"Screen Actors Guild Award Outstanding Performance",
-					"Emmy Nomination for Outstanding Drama Series",
-					"Critics Choice Award for Best Sci-Fi/Horror Series",
-					"People's Choice Award for Favorite Premium Series",
-				],
-				facts: [
-					"The show is set in the fictional town of Hawkins, Indiana",
-					"Filmed primarily in Atlanta, Georgia",
-					"The Upside Down was inspired by Silent Hill",
-					"Originally pitched as a limited series",
-					"The kids' characters were aged up for later seasons",
-				],
-				episodes: [
-					{
-						season: 1,
-						title: "Season 1: The Vanishing of Will Byers",
-						episodes: 8,
-						year: "2016",
-						description:
-							"A young boy disappears, and his mother, friends, and the sheriff must confront terrifying supernatural forces.",
-						poster:
-							"https://image.tmdb.org/t/p/w300/aagCrxR2aZhVfDa9CPTCeSGK0FV.jpg",
-					},
-					{
-						season: 2,
-						title: "Season 2: The Mind Flayer",
-						episodes: 9,
-						year: "2017",
-						description:
-							"Will struggles with his connection to the Upside Down, while a new threat emerges.",
-						poster:
-							"https://image.tmdb.org/t/p/w300/78aK4Msbr22A5PGa6PZV0pAvdwf.jpg",
-					},
-					{
-						season: 3,
-						title: "Season 3: The Battle of Starcourt",
-						episodes: 8,
-						year: "2019",
-						description:
-							"The gang must stop a powerful new enemy that threatens the town of Hawkins.",
-						poster:
-							"https://image.tmdb.org/t/p/w300/x2LSRK2Cm7MZhjluni1msVJ3wDF.jpg",
-					},
-					{
-						season: 4,
-						title: "Season 4: The Hellfire Club",
-						episodes: 9,
-						year: "2022",
-						description:
-							"A new horror begins to surface, something long buried, something that connects everything.",
-						poster:
-							"https://image.tmdb.org/t/p/w300/49WJfeN0moxb9IPfGn8AIqMGskD.jpg",
-					},
-				],
-				similar: [
-					{
-						id: "dark",
-						title: "Dark",
-						poster:
-							"https://image.tmdb.org/t/p/w500/1ajNmPpIHnYNPqjUf5kUALPxqcp.jpg",
-					},
-					{
-						id: "the-witcher",
-						title: "The Witcher",
-						poster:
-							"https://image.tmdb.org/t/p/w500/7vjaCdMw15FEbXyLQTVa04URsPm.jpg",
-					},
-					{
-						id: "umbrella-academy",
-						title: "The Umbrella Academy",
-						poster:
-							"https://image.tmdb.org/t/p/w500/scZlQQYnDVlnpxFTxaIv2g0BWnL.jpg",
-					},
-					{
-						id: "squid-game",
-						title: "Squid Game",
-						poster:
-							"https://image.tmdb.org/t/p/w500/dDlEmu3EZ0Pgg93K2SVNLCjCSvE.jpg",
-					},
-				],
-			};
-			setVideoData(mockData);
+		if (!authLoading && !user) {
+			router.replace("/login");
+			return;
 		}
-	}, [slug]);
+	}, [user, authLoading, router]);
 
-	if (!mounted || isLoading) {
+	// Fetch video data
+	useEffect(() => {
+		const fetchVideoData = async () => {
+			if (!slug || !user) return;
+
+			try {
+				setIsLoading(true);
+				setError(null);
+
+				// API Call: Get video details by slug
+				const response = await axios.get(`/getVideoBySlug/${slug}`);
+
+				const videoInfo = response.data;
+
+				// Transform the data to match the component's expected format
+				const transformedData = {
+					id: videoInfo.id,
+					title: videoInfo.title,
+					year: videoInfo.release_year,
+					rating: videoInfo.rating || "N/A",
+					duration: formatDuration(videoInfo.duration),
+					genre: videoInfo.genres ? videoInfo.genres.map((g) => g.name) : [],
+					tags: videoInfo.tags ? videoInfo.tags.map((t) => t.name) : [],
+					maturityRating: videoInfo.content_rating || "NR",
+					description: videoInfo.description || "No description available.",
+					longDescription:
+						videoInfo.description || "No detailed description available.",
+					cast: videoInfo.people || [],
+					backdrop: videoInfo.backdrop_path,
+					poster: videoInfo.thumbnail_path,
+					trailer: videoInfo.trailer_url || null,
+					language: videoInfo.language || "Unknown",
+					status: videoInfo.status,
+					resolutions: videoInfo.resolutions || [],
+					quality: getQualityFromResolutions(videoInfo.resolutions),
+					slug: videoInfo.slug,
+					// Generate facts from actual data
+					facts: [
+						`Released in ${videoInfo.release_year}`,
+						`Available in ${videoInfo.language?.toUpperCase()} language`,
+						`Duration: ${formatDuration(videoInfo.duration)}`,
+						`Content Rating: ${videoInfo.content_rating || "Not Rated"}`,
+						`Available in ${
+							videoInfo.resolutions?.length || 0
+						} quality options`,
+						videoInfo.tags?.length > 0
+							? `Tags: ${videoInfo.tags.map((t) => t.name).join(", ")}`
+							: null,
+					].filter(Boolean),
+					episodes: [], // For TV shows, this would be populated
+				};
+
+				setVideoData(transformedData);
+			} catch (err) {
+				console.error("Error fetching video data:", err);
+				if (err.response?.status === 404) {
+					setError("Video not found");
+				} else {
+					setError("Failed to load video details. Please try again.");
+				}
+			} finally {
+				setIsLoading(false);
+			}
+		};
+
+		fetchVideoData();
+	}, [slug, user]);
+
+	if (authLoading || !user || !mounted || isLoading) {
 		return <PageLoadingComponent />;
 	}
 
-	if (!videoData) {
+	if (error) {
 		return (
 			<div className="min-h-screen bg-background flex items-center justify-center">
 				<div className="text-center">
@@ -193,20 +135,38 @@ export default function VideoDetailsPage() {
 						className="w-24 h-24 text-primary mx-auto mb-4"
 					/>
 					<h1 className="text-2xl font-bold mb-4 text-foreground">
-						Video Not Found
+						{error === "Video not found"
+							? "Video Not Found"
+							: "Error Loading Video"}
 					</h1>
 					<p className="mb-6 text-muted-foreground">
-						The video you're looking for doesn't exist or has been removed.
+						{error === "Video not found"
+							? "The video you're looking for doesn't exist or has been removed."
+							: error}
 					</p>
-					<Button
-						onClick={() => router.push("/home")}
-						className="bg-primary hover:bg-primary/90 text-primary-foreground">
-						<Icon icon="solar:arrow-left-bold" className="w-4 h-4 mr-2" />
-						Go Back Home
-					</Button>
+					<div className="flex gap-4 justify-center">
+						<Button
+							onClick={() => router.push("/home")}
+							className="bg-primary hover:bg-primary/90 text-primary-foreground">
+							<Icon icon="solar:arrow-left-bold" className="w-4 h-4 mr-2" />
+							Go Back Home
+						</Button>
+						{error !== "Video not found" && (
+							<Button
+								variant="outline"
+								onClick={() => window.location.reload()}>
+								<Icon icon="solar:refresh-bold" className="w-4 h-4 mr-2" />
+								Try Again
+							</Button>
+						)}
+					</div>
 				</div>
 			</div>
 		);
+	}
+
+	if (!videoData) {
+		return <PageLoadingComponent />;
 	}
 
 	return (
@@ -257,20 +217,22 @@ export default function VideoDetailsPage() {
 							<div className="flex-1 max-w-3xl">
 								{/* Title */}
 								<h1 className="text-4xl md:text-6xl font-bold mb-4 leading-tight text-foreground">
-									<span className="bg-gradient-to-r bg-clip-text text-transparent from-foreground via-primary/90 to-primary">
+									<span className="bg-primary bg-clip-text text-transparent from-foreground via-primary/90 to-primary">
 										{videoData.title}
 									</span>
 								</h1>
 
 								{/* Metadata */}
 								<div className="flex flex-wrap items-center gap-4 mb-6">
-									<div className="flex items-center gap-2 backdrop-blur-sm px-3 py-1 rounded-full bg-foreground/10 text-foreground/90">
-										<Icon
-											icon="solar:star-bold-duotone"
-											className="w-4 h-4 text-yellow-400"
-										/>
-										<span className="font-semibold">{videoData.rating}</span>
-									</div>
+									{videoData.rating !== "N/A" && (
+										<div className="flex items-center gap-2 backdrop-blur-sm px-3 py-1 rounded-full bg-foreground/10 text-foreground/90">
+											<Icon
+												icon="solar:star-bold-duotone"
+												className="w-4 h-4 text-yellow-400"
+											/>
+											<span className="font-semibold">{videoData.rating}</span>
+										</div>
+									)}
 									<span className="text-lg text-foreground/90">
 										{videoData.year}
 									</span>
@@ -283,21 +245,42 @@ export default function VideoDetailsPage() {
 										{videoData.maturityRating}
 									</Badge>
 									<Badge className="bg-primary hover:bg-primary/90 text-primary-foreground">
-										4K HDR
+										{videoData.quality}
 									</Badge>
+									{videoData.language && (
+										<Badge variant="secondary">
+											{videoData.language.toUpperCase()}
+										</Badge>
+									)}
 								</div>
 
 								{/* Genres */}
-								<div className="flex flex-wrap gap-2 mb-6">
-									{videoData.genre.map((g, index) => (
-										<Badge
-											key={index}
-											variant="outline"
-											className="border-primary/30 text-primary bg-primary/10 hover:bg-primary/20">
-											{g}
-										</Badge>
-									))}
-								</div>
+								{videoData.genre.length > 0 && (
+									<div className="flex flex-wrap gap-2 mb-6">
+										{videoData.genre.map((g, index) => (
+											<Badge
+												key={index}
+												variant="outline"
+												className="border-primary/30 text-primary bg-primary/10 hover:bg-primary/20 capitalize">
+												{g}
+											</Badge>
+										))}
+									</div>
+								)}
+
+								{/* Tags */}
+								{videoData.tags.length > 0 && (
+									<div className="flex flex-wrap gap-2 mb-6">
+										{videoData.tags.map((tag, index) => (
+											<Badge
+												key={index}
+												variant="secondary"
+												className="capitalize">
+												{tag}
+											</Badge>
+										))}
+									</div>
+								)}
 
 								{/* Description */}
 								<p className="text-lg mb-8 leading-relaxed text-foreground/90">
@@ -317,7 +300,10 @@ export default function VideoDetailsPage() {
 										variant="outline"
 										size="lg"
 										className="backdrop-blur-sm px-8 py-3 text-lg border-border text-foreground hover:bg-accent hover:text-accent-foreground">
-										<Icon icon="solar:bookmark-bold" className="w-6 h-6 mr-2" />
+										<Icon
+											icon="solar:bookmark-outline"
+											className="w-6 h-6 mr-2"
+										/>
 										Add to Watchlist
 									</Button>
 									<Button
@@ -345,23 +331,22 @@ export default function VideoDetailsPage() {
 			<section className="relative py-16">
 				<div className="container mx-auto px-6">
 					{/* Tab Navigation */}
-					<div className="flex flex-wrap gap-4 mb-8 border-b border-border">
+					<div className="flex flex-wrap gap-4 mb-8 border-b border-border pb-4">
 						{[
 							{
 								id: "overview",
 								label: "Overview",
 								icon: "solar:info-circle-bold",
 							},
-							{
-								id: "cast",
-								label: "Cast & Crew",
-								icon: "solar:users-group-rounded-bold",
-							},
-							{
-								id: "episodes",
-								label: "Episodes",
-								icon: "solar:video-library-bold",
-							},
+							...(videoData.cast.length > 0
+								? [
+										{
+											id: "cast",
+											label: "Cast",
+											icon: "solar:users-group-rounded-bold",
+										},
+								  ]
+								: []),
 							{
 								id: "details",
 								label: "Details",
@@ -396,120 +381,80 @@ export default function VideoDetailsPage() {
 									</p>
 								</div>
 
-								<div>
-									<h3 className="text-2xl font-bold mb-4 text-foreground">
-										Awards & Recognition
-									</h3>
-									<div className="grid md:grid-cols-2 gap-4">
-										{videoData.awards.map((award, index) => (
-											<div
-												key={index}
-												className="flex items-center p-4 rounded-lg bg-card hover:bg-card/80 transition-colors duration-300">
-												<Icon
-													icon="solar:medal-star-bold-duotone"
-													className="w-6 h-6 text-yellow-500 mr-3"
-												/>
-												<span className="text-card-foreground">{award}</span>
+								{/* Genre & Tags Information */}
+								<div className="grid md:grid-cols-2 gap-8">
+									{videoData.genre.length > 0 && (
+										<div>
+											<h4 className="text-xl font-semibold mb-4 text-foreground">
+												Genres
+											</h4>
+											<div className="flex flex-wrap gap-2">
+												{videoData.genre.map((genre, index) => (
+													<Badge
+														key={index}
+														variant="outline"
+														className="border-primary/30 text-primary bg-primary/10 hover:bg-primary/20 capitalize">
+														{genre}
+													</Badge>
+												))}
 											</div>
-										))}
-									</div>
+										</div>
+									)}
+
+									{videoData.tags.length > 0 && (
+										<div>
+											<h4 className="text-xl font-semibold mb-4 text-foreground">
+												Tags
+											</h4>
+											<div className="flex flex-wrap gap-2">
+												{videoData.tags.map((tag, index) => (
+													<Badge
+														key={index}
+														variant="secondary"
+														className="capitalize">
+														{tag}
+													</Badge>
+												))}
+											</div>
+										</div>
+									)}
 								</div>
 							</div>
 						)}
 
-						{activeTab === "cast" && (
+						{activeTab === "cast" && videoData.cast.length > 0 && (
 							<div className="space-y-8">
 								<div>
 									<h3 className="text-2xl font-bold mb-6 text-foreground">
-										Main Cast
+										Cast
 									</h3>
 									<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-										{videoData.cast.map((actor, index) => (
+										{videoData.cast.map((person, index) => (
 											<Card
 												key={index}
 												className="bg-card border-border hover:border-primary/50 transition-all duration-300 cursor-pointer group">
 												<CardContent className="p-4">
 													<div className="relative aspect-square mb-3 rounded-lg overflow-hidden">
 														<Image
-															src={actor.image}
-															alt={actor.name}
+															src={
+																person.profile_picture ||
+																"/placeholder-avatar.png"
+															}
+															alt={person.name}
 															fill
 															className="object-cover group-hover:scale-105 transition-transform duration-300"
 														/>
 													</div>
 													<h4 className="font-semibold text-sm mb-1 text-card-foreground">
-														{actor.name}
+														{person.name}
 													</h4>
 													<p className="text-xs text-muted-foreground">
-														{actor.character}
+														{person.pivot?.credited_as || "Actor"}
 													</p>
 												</CardContent>
 											</Card>
 										))}
 									</div>
-								</div>
-
-								<div>
-									<h3 className="text-2xl font-bold mb-6 text-foreground">
-										Crew
-									</h3>
-									<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-										{videoData.crew.map((member, index) => (
-											<div
-												key={index}
-												className="p-4 rounded-lg bg-card hover:bg-card/80 transition-colors duration-300">
-												<h4 className="font-semibold mb-1 text-card-foreground">
-													{member.name}
-												</h4>
-												<p className="text-sm text-muted-foreground">
-													{member.role}
-												</p>
-											</div>
-										))}
-									</div>
-								</div>
-							</div>
-						)}
-
-						{activeTab === "episodes" && (
-							<div>
-								<h3 className="text-2xl font-bold mb-6 text-foreground">
-									Seasons & Episodes
-								</h3>
-								<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-									{videoData.episodes.map((season, index) => (
-										<Card
-											key={index}
-											className="bg-card border-border hover:border-primary/50 transition-all duration-300 cursor-pointer group">
-											<CardContent className="p-0">
-												<div className="relative aspect-video overflow-hidden rounded-t-lg">
-													<Image
-														src={season.poster}
-														alt={season.title}
-														fill
-														className="object-cover group-hover:scale-105 transition-transform duration-300"
-													/>
-												</div>
-												<div className="p-4">
-													<h4 className="font-bold text-lg mb-2 text-card-foreground">
-														Season {season.season}
-													</h4>
-													<div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
-														<Icon
-															icon="solar:calendar-bold"
-															className="w-4 h-4"
-														/>
-														<span>{season.year}</span>
-														<span>•</span>
-														<span>{season.episodes} Episodes</span>
-													</div>
-													<p className="text-xs leading-relaxed text-card-foreground/80">
-														{season.description}
-													</p>
-												</div>
-											</CardContent>
-										</Card>
-									))}
 								</div>
 							</div>
 						)}
@@ -518,18 +463,20 @@ export default function VideoDetailsPage() {
 							<div className="space-y-8">
 								<div>
 									<h3 className="text-2xl font-bold mb-6 text-foreground">
-										Production Details
+										Video Details
 									</h3>
 									<div className="grid md:grid-cols-2 gap-8">
 										<div className="space-y-4">
-											<div className="p-4 rounded-lg bg-card">
-												<h4 className="font-semibold mb-2 text-primary">
-													Genre
-												</h4>
-												<p className="text-card-foreground">
-													{videoData.genre.join(", ")}
-												</p>
-											</div>
+											{videoData.genre.length > 0 && (
+												<div className="p-4 rounded-lg bg-card">
+													<h4 className="font-semibold mb-2 text-primary">
+														Genres
+													</h4>
+													<p className="text-card-foreground capitalize">
+														{videoData.genre.join(", ")}
+													</p>
+												</div>
+											)}
 											<div className="p-4 rounded-lg bg-card">
 												<h4 className="font-semibold mb-2 text-primary">
 													Release Year
@@ -538,16 +485,36 @@ export default function VideoDetailsPage() {
 											</div>
 											<div className="p-4 rounded-lg bg-card">
 												<h4 className="font-semibold mb-2 text-primary">
-													Rating
+													Content Rating
 												</h4>
 												<p className="text-card-foreground">
 													{videoData.maturityRating}
 												</p>
 											</div>
+											<div className="p-4 rounded-lg bg-card">
+												<h4 className="font-semibold mb-2 text-primary">
+													Language
+												</h4>
+												<p className="text-card-foreground uppercase">
+													{videoData.language}
+												</p>
+											</div>
+											<div className="p-4 rounded-lg bg-card">
+												<h4 className="font-semibold mb-2 text-primary">
+													Available Quality
+												</h4>
+												<div className="flex flex-wrap gap-2">
+													{videoData.resolutions.map((res, index) => (
+														<Badge key={index} variant="secondary">
+															{res}
+														</Badge>
+													))}
+												</div>
+											</div>
 										</div>
 										<div>
 											<h4 className="font-semibold mb-4 text-foreground">
-												Interesting Facts
+												Additional Information
 											</h4>
 											<div className="space-y-3">
 												{videoData.facts.map((fact, index) => (
@@ -569,49 +536,6 @@ export default function VideoDetailsPage() {
 								</div>
 							</div>
 						)}
-					</div>
-
-					{/* Similar Content */}
-					<Separator className="my-16" />
-					<div>
-						<h2 className="text-3xl font-bold mb-8 flex items-center gap-4 text-foreground">
-							More Like This
-							<div className="w-12 h-1 bg-gradient-to-r from-primary to-primary/60 rounded-full"></div>
-						</h2>
-						<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-							{videoData.similar.map((item, index) => (
-								<Card
-									key={index}
-									className="bg-card border-border hover:border-primary/50 transition-all duration-300 cursor-pointer group"
-									onClick={() => router.push(`/video/${item.id}`)}>
-									<CardContent className="p-0">
-										<div className="relative aspect-[2/3] overflow-hidden rounded-lg">
-											<Image
-												src={item.poster}
-												alt={item.title}
-												fill
-												className="object-cover group-hover:scale-105 transition-transform duration-300"
-											/>
-											<div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-											<div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-												<h4 className="text-white font-semibold text-sm mb-2">
-													{item.title}
-												</h4>
-												<Button
-													size="sm"
-													className="bg-primary hover:bg-primary/90 text-primary-foreground">
-													<Icon
-														icon="solar:play-bold"
-														className="w-3 h-3 mr-1"
-													/>
-													Play
-												</Button>
-											</div>
-										</div>
-									</CardContent>
-								</Card>
-							))}
-						</div>
 					</div>
 				</div>
 			</section>

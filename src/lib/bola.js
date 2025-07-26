@@ -1,168 +1,8 @@
-import { getSegmentSizes, getVideoSegment } from "./utils"; // Assuming utils.js is still separate
+import { getSegmentSizes, getVideoSegment } from "./utils";
 
-const REBUFFER_PENALTY = 5; // Penalty (utility units) per segment of rebuffer.
-const MAX_BUFFER_CAPACITY_SECONDS = 20; // Max desired buffer in seconds (e.g., 3 segments * 5s/segment)
-
-// BOLA (Buffer Occupancy Based Lyapunov Algorithm)
-export default async function BOLA(
-	videoId,
-	videoElement,
-	segment,
-	resolutionList,
-	totalDuration,
-	lastSelectedResolution = null,
-	lastBandwidth = null, // This is the smoothed bandwidth from initializeVideoStream
-	placeHolderBufferSeconds, // NOW this is explicitly in SECONDS
-	typicalSegmentDuration, // Passed from startMainPlayback for unit consistency
-) {
-	const currentTime = videoElement.currentTime;
-	const segmentDuration = segment.duration; // This is the actual segment duration
-
-	// Use typicalSegmentDuration for calculations where a consistent segment duration is assumed
-	// (e.g., converting seconds to segments)
-	const effectiveSegmentDuration = typicalSegmentDuration;
-
-	// Step 2: t ← min[currentTime, totalDuration - currentTime]
-	const t = Math.min(currentTime, totalDuration - currentTime);
-
-	// Step 3: t' ← max[t/2, 3p] (where p is effectiveSegmentDuration)
-	const t_prime = Math.max(t / 2, 3 * effectiveSegmentDuration);
-
-	// Step 4: QD_max ← min[MAX_BUFFER_CAPACITY_SEGMENTS, t'/p]
-	// QD_max and Q must be in segments for BOLA formula
-	const MAX_BUFFER_CAPACITY_SEGMENTS =
-		MAX_BUFFER_CAPACITY_SECONDS / effectiveSegmentDuration;
-	const QD_max = Math.min(
-		MAX_BUFFER_CAPACITY_SEGMENTS,
-		t_prime / effectiveSegmentDuration,
-	); // QD_max in segments
-
-	let segmentSizes; // in bytes, direct object { "360p": 12345, ... }
-	try {
-		segmentSizes = await getSegmentSizes(segment.name, videoId);
-	} catch (error) {
-		console.error("Error fetching segment sizes for BOLA:", error);
-		// Fallback to a default or handle error appropriately, e.g., choose lowest resolution
-		return resolutionList[0];
-	}
-
-	const U_m = calculateUtility(segmentSizes.sizes, resolutionList); // Utility for each resolution
-	const U_max = Math.max(...U_m); // Max utility across resolutions
-
-	// Step 5: V_D ← (QD_max - 1) / (max utility + γ)
-	// γ (REBUFFER_PENALTY) is now a penalty *per segment*
-	const V_D = (QD_max - 1) / (U_max + REBUFFER_PENALTY);
-
-	// Q must be in segments
-	const Q =
-		placeHolderBufferSeconds !== null
-			? placeHolderBufferSeconds / effectiveSegmentDuration // Convert from seconds to segments
-			: getCurrentBufferLevel(videoElement) / effectiveSegmentDuration; // Convert from seconds to segments
-
-	let score = [];
-
-	// Step 6: m*[n] ← arg maxm (V_D * U_m + V_Dγ - Q) / S_m
-	for (let i = 0; i < resolutionList.length; i++) {
-		const res = resolutionList[i];
-		const S_m = segmentSizes.sizes[res]; // in bytes
-		const S_m_MB = S_m / (1024 * 1024); // convert to MB
-
-		// REBUFFER_PENALTY is already in "per segment" units, so no * segmentDuration here
-		const resolutionScore =
-			(V_D * U_m[i] + V_D * REBUFFER_PENALTY - Q) / S_m_MB;
-		score.push(resolutionScore);
-	}
-	let bestResIndex = score.indexOf(Math.max(...score));
-	// Fallback in case all scores are -Infinity (e.g., all segment sizes were 0)
-	if (bestResIndex === -1) {
-		bestResIndex = 0; // Default to lowest resolution
-	}
-	let m_star = resolutionList[bestResIndex];
-
-	// Step 7: if m*[n] < m*[n−1] → quality dropped
-	if (
-		lastSelectedResolution !== null &&
-		resolutionList.indexOf(m_star) <
-			resolutionList.indexOf(lastSelectedResolution)
-	) {
-		// Step 8: r ← measured bandwidth of last segment
-		const r = lastBandwidth || 0; // MBps, default to 0 if no bandwidth measured yet
-		const lastSizeMB =
-			(segmentSizes.sizes[lastSelectedResolution] || 0) / (1024 * 1024); // MB
-		const maxR = Math.max(r, lastSizeMB / segmentDuration); // MBps (using actual segmentDuration for this rate)
-
-		// Step 9: m0 ← min m such that S_m / p ≤ maxR
-		let m0 = resolutionList[0]; // Default to lowest resolution
-		for (let res of resolutionList) {
-			const S_m = (segmentSizes.sizes[res] || 0) / (1024 * 1024); // MB
-			if (S_m / effectiveSegmentDuration <= maxR) {
-				// Use effectiveSegmentDuration for rate comparison
-				m0 = res;
-				break;
-			}
-		}
-
-		const m0Index = resolutionList.indexOf(m0);
-		const mPrevIndex = resolutionList.indexOf(lastSelectedResolution);
-		const mStarIndex = bestResIndex;
-
-		// Step 10: if m0 ≤ m∗[n] then
-		if (m0Index <= mStarIndex) {
-			// Step 11: m0 ← m*[n]
-			bestResIndex = mStarIndex;
-			// Step 12: else if m0 > m*[n] then
-		} else if (m0Index > mPrevIndex) {
-			// Step 13: m0 ← m*[n-1]
-			bestResIndex = mPrevIndex;
-		} else {
-			// Step 14: else if some utility sacrificed for fewer oscillations then
-			const m0_S = segmentSizes.sizes[resolutionList[m0Index]] / (1024 * 1024); // MB
-			const m0_U = U_m[m0Index];
-
-			const m0m1Index = Math.max(0, m0Index - 1);
-			const m0m1_S =
-				segmentSizes.sizes[resolutionList[m0m1Index]] / (1024 * 1024); // MB
-			const m0m1_U = U_m[m0m1Index];
-
-			// New lines (corrected): Scores should be calculated consistently
-			const score_m0 = (V_D * m0_U + V_D * REBUFFER_PENALTY - Q) / m0_S;
-			const score_m0m1 = (V_D * m0m1_U + V_D * REBUFFER_PENALTY - Q) / m0m1_S;
-
-			// Step 15: pause until (VD*υm0 + VD*γp − Q)/Sm0 ≥(VDυm0−1 + VDγp − Q)/Sm0−1
-			if (score_m0 >= score_m0m1) {
-				const pauseTimeSeconds = Math.max(
-					0,
-					effectiveSegmentDuration * (Q - QD_max + 1),
-				);
-				await new Promise((resolve) =>
-					setTimeout(resolve, pauseTimeSeconds * 1000),
-				);
-				bestResIndex = m0Index;
-				// Step 16: else m0 ← m0 − 1
-			} else {
-				console.log("🧹 BOLA-U: Dropping one level to reduce oscillation.");
-				bestResIndex = Math.max(0, m0Index - 1);
-			}
-		}
-	}
-	// Step 17: pause for max[p · (Q − QD_max + 1), 0]
-	// Pause time in seconds, using Q and QD_max in segments
-	const pauseTimeSeconds = Math.max(
-		0,
-		effectiveSegmentDuration * (Q - QD_max + 1),
-	);
-	// await new Promise((resolve) => setTimeout(resolve, pauseTimeSeconds * 1000)); // Convert to milliseconds
-	//console table of scores in each resolution
-	console.table(
-		resolutionList.map((res, index) => ({
-			Resolution: res,
-			Score: score[index].toFixed(2),
-			Utility: U_m[index].toFixed(2),
-			SizeMB: (segmentSizes.sizes[res] / (1024 * 1024)).toFixed(2),
-		})),
-	);
-	return resolutionList[bestResIndex];
-}
+// --- FIX: Set a realistic buffer capacity ---
+const REBUFFER_PENALTY = 10;
+const MAX_BUFFER_CAPACITY_SECONDS = 40; // Set to a reasonable value like 40 seconds
 
 function getCurrentBufferLevel(videoElement) {
 	if (
@@ -172,20 +12,154 @@ function getCurrentBufferLevel(videoElement) {
 	) {
 		return 0;
 	}
-	return videoElement.buffered.end(0) - videoElement.currentTime;
+	const currentTime = videoElement.currentTime;
+	// Find the buffer range that contains the current time
+	for (let i = 0; i < videoElement.buffered.length; i++) {
+		if (
+			videoElement.buffered.start(i) <= currentTime &&
+			videoElement.buffered.end(i) >= currentTime
+		) {
+			return videoElement.buffered.end(i) - currentTime;
+		}
+	}
+	return 0; // Return 0 if currentTime is not in any buffered range
+}
+
+export default async function BOLA(
+	videoId,
+	videoElement,
+	segment,
+	resolutionList,
+	totalDuration,
+	lastSelectedResolution = null,
+	lastBandwidth = null,
+	placeHolderBuffer, // This is now the full object { buffer: seconds }
+	typicalSegmentDuration,
+) {
+	const currentTime = videoElement.currentTime;
+	const segmentDuration = segment.duration;
+	const effectiveSegmentDuration = typicalSegmentDuration;
+
+	const t = Math.min(currentTime, totalDuration - currentTime);
+	const t_prime = Math.max(t / 2, 3 * effectiveSegmentDuration);
+
+	const MAX_BUFFER_CAPACITY_SEGMENTS =
+		MAX_BUFFER_CAPACITY_SECONDS / effectiveSegmentDuration;
+	const QD_max = Math.min(
+		MAX_BUFFER_CAPACITY_SEGMENTS,
+		t_prime / effectiveSegmentDuration,
+	);
+
+	let segmentSizes;
+	try {
+		segmentSizes = await getSegmentSizes(segment.name, videoId);
+	} catch (error) {
+		console.error("Error fetching segment sizes for BOLA:", error);
+		return resolutionList[0];
+	}
+
+	const U_m = calculateUtility(segmentSizes.sizes, resolutionList);
+	const U_max = Math.max(...U_m);
+	const V_D = (QD_max - 1) / (U_max + REBUFFER_PENALTY);
+
+	// --- FIX: Use live buffer after the first segment ---
+	// The placeholder is only valid for the very first segment decision.
+	// After that, we must use the actual measured buffer.
+	const bufferInSeconds =
+		segment.name === "segment_000.m4s" && placeHolderBuffer
+			? placeHolderBuffer.buffer
+			: getCurrentBufferLevel(videoElement);
+
+	const Q = bufferInSeconds / effectiveSegmentDuration;
+
+	let score = [];
+	for (let i = 0; i < resolutionList.length; i++) {
+		const res = resolutionList[i];
+		const S_m_MB = (segmentSizes.sizes[res] || 0) / (1024 * 1024);
+
+		let resolutionScore;
+		if (!S_m_MB || S_m_MB === 0) {
+			resolutionScore = -Infinity;
+		} else {
+			resolutionScore = (V_D * U_m[i] + V_D * REBUFFER_PENALTY - Q) / S_m_MB;
+		}
+		score.push(resolutionScore);
+	}
+
+	let bestResIndex = score.indexOf(Math.max(...score));
+	if (bestResIndex === -1) {
+		bestResIndex = 0;
+	}
+	let m_star = resolutionList[bestResIndex];
+
+	// (The rest of the BOLA logic for oscillation control remains the same)
+	if (
+		lastSelectedResolution !== null &&
+		resolutionList.indexOf(m_star) <
+			resolutionList.indexOf(lastSelectedResolution)
+	) {
+		const r = lastBandwidth || 0;
+		const lastSizeMB =
+			(segmentSizes.sizes[lastSelectedResolution] || 0) / (1024 * 1024);
+		const maxR = Math.max(r, lastSizeMB / segmentDuration);
+
+		let m0 = resolutionList[0];
+		for (let res of resolutionList) {
+			const S_m = (segmentSizes.sizes[res] || 0) / (1024 * 1024);
+			if (S_m / effectiveSegmentDuration <= maxR) {
+				m0 = res;
+				break;
+			}
+		}
+
+		const m0Index = resolutionList.indexOf(m0);
+		const mPrevIndex = resolutionList.indexOf(lastSelectedResolution);
+		const mStarIndex = bestResIndex;
+
+		if (m0Index <= mStarIndex) {
+			bestResIndex = mStarIndex;
+		} else if (m0Index > mPrevIndex) {
+			bestResIndex = mPrevIndex;
+		} else {
+			const m0_S = segmentSizes.sizes[resolutionList[m0Index]] / (1024 * 1024);
+			const m0_U = U_m[m0Index];
+			const m0m1Index = Math.max(0, m0Index - 1);
+			const m0m1_S =
+				segmentSizes.sizes[resolutionList[m0m1Index]] / (1024 * 1024);
+			const m0m1_U = U_m[m0m1Index];
+			const score_m0 = (V_D * m0_U + V_D * REBUFFER_PENALTY - Q) / m0_S;
+			const score_m0m1 = (V_D * m0m1_U + V_D * REBUFFER_PENALTY - Q) / m0m1_S;
+
+			if (score_m0 >= score_m0m1) {
+				bestResIndex = m0Index;
+			} else {
+				bestResIndex = Math.max(0, m0Index - 1);
+			}
+		}
+	}
+
+	// Logging for debug purposes
+	const logData = {
+		"Buffer Level (s)": bufferInSeconds,
+		"QD_max (segments)": QD_max,
+		"Q (segments)": Q,
+		V_D: V_D,
+		"Final Resolution": resolutionList[bestResIndex],
+	};
+	console.table(logData);
+
+	return resolutionList[bestResIndex];
 }
 
 function calculateUtility(segmentSizes, resolutionList) {
 	const S_min = calculateMinSegmentSize(segmentSizes);
-
 	const utility = [];
 	resolutionList.forEach((res) => {
 		const S_m = segmentSizes[res];
 		if (S_m > 0 && S_min > 0) {
-			const utilityValue = Math.log(S_m / S_min);
-			utility.push(utilityValue);
+			utility.push(Math.log(S_m / S_min));
 		} else {
-			utility.push(0); // If size is 0 or S_min is 0, utility is 0
+			utility.push(0);
 		}
 	});
 	return utility;
@@ -193,9 +167,7 @@ function calculateUtility(segmentSizes, resolutionList) {
 
 function calculateMinSegmentSize(sizes) {
 	const validSizes = Object.values(sizes).filter((size) => size > 0);
-	if (validSizes.length === 0) {
-		return 1; // Prevent division by zero if all sizes are zero, use a small positive number
-	}
+	if (validSizes.length === 0) return 1;
 	return Math.min(...validSizes);
 }
 
@@ -204,69 +176,48 @@ export async function getPlaceholderBuffer(
 	resolutionList,
 	segmentList,
 ) {
-	const start = performance.now();
-
-	// Use the highest available resolution for the initial test to gauge max throughput.
-	// Fallback to the lowest if the list is somehow empty.
-	const initialTestResolution =
-		resolutionList[resolutionList.length - 1] || resolutionList[0];
-
-	if (!initialTestResolution) {
-		console.error(
-			"BOLA-U: No resolutions available to test for placeholder buffer.",
-		);
-		return { startupResolution: "144p", buffer: 0 }; // Return a safe default
+	if (!segmentList || segmentList.length === 0) {
+		return { startupResolution: "144p", startupBandwidth: 0.1, buffer: 0 };
 	}
-
-	// Fetch the first segment at the test resolution.
-	const initSegment = await getVideoSegment(
+	const start = performance.now();
+	const testResolution = resolutionList.includes("480p")
+		? "480p"
+		: resolutionList[0];
+	const testSegment = await getVideoSegment(
 		videoId,
-		initialTestResolution,
+		testResolution,
 		segmentList[0].name,
 	);
 	const end = performance.now();
-
-	// Calculate download metrics
-	const initDuration = (end - start) / 1000; // Time to download in seconds
-	const initSizeMB = initSegment.byteLength / (1024 * 1024);
-	const measuredBandwidthMBps = initSizeMB / initDuration;
-
-	// A table mapping resolutions to their approximate required bitrates in Kbps.
-	// This helps in selecting a smart startup resolution.
+	if (!testSegment) {
+		return { startupResolution: "144p", startupBandwidth: 0.1, buffer: 0 };
+	}
+	const downloadTimeSeconds = (end - start) / 1000;
+	const segmentSizeMB = testSegment.byteLength / (1024 * 1024);
+	const measuredBandwidth =
+		downloadTimeSeconds > 0 ? segmentSizeMB / downloadTimeSeconds : 0;
 	const bitrateTable = {
-		"144p": 150,
-		"240p": 400,
-		"360p": 800,
-		"480p": 1200,
-		"720p": 2500,
-		"1080p": 4500,
-		"1440p": 6500,
-		"2160p": 12000,
+		"144p": 0.02,
+		"240p": 0.05,
+		"480p": 0.15,
+		"720p": 0.3,
+		"1080p": 0.55,
 	};
-
-	// Estimate the user's bandwidth in Kbps
-	const estimatedBitrateKbps = measuredBandwidthMBps * 8 * 1024;
-
-	// Determine the best startup resolution based on the measured bandwidth.
-	// Start from the lowest and find the highest sustainable quality.
-	let startupResolution = resolutionList[0] || "144p"; // Default to lowest
+	let startupResolution = resolutionList[0] || "144p";
 	for (const res of resolutionList) {
-		if (bitrateTable[res] && bitrateTable[res] <= estimatedBitrateKbps) {
+		if (bitrateTable[res] && bitrateTable[res] < measuredBandwidth * 0.8) {
 			startupResolution = res;
 		} else {
-			// Since resolutionList is sorted, we can break once we exceed the estimated bandwidth.
 			break;
 		}
 	}
-
-	// --- CORRECTED CALCULATION ---
-	// The placeholder buffer is the net gain in buffer time:
-	// (Duration of the segment) - (Time it took to download it).
-	// We use Math.max(0, ...) to ensure the buffer isn't negative, as a deficit is treated as zero buffer.
-	const placeHolderBuffer = Math.max(0, segmentList[0].duration - initDuration);
-
+	const placeholderBufferSeconds = Math.max(
+		0,
+		segmentList[0].duration - downloadTimeSeconds,
+	);
 	return {
 		startupResolution,
-		buffer: placeHolderBuffer + segmentList[0].duration + 9, // Add segment duration and intro time to buffer
+		startupBandwidth: measuredBandwidth,
+		buffer: placeholderBufferSeconds + 9,
 	};
 }

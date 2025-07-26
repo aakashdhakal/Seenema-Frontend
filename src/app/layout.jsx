@@ -1,9 +1,7 @@
 import { Geist, Geist_Mono, Nunito } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/combinedComponents/Navbar";
 import { SWRConfig } from "swr";
 import { AuthProvider } from "@/context/AuthContext";
-import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
@@ -40,14 +38,7 @@ export default function RootLayout({ children }) {
 						focusThrottleInterval: 3600000, // 1 hour
 					}}>
 					<AuthProvider>
-						<ThemeProvider
-							attribute="class"
-							defaultTheme="system"
-							enableSystem
-							disableTransitionOnChange>
-							{/* <Navbar /> */}
-							{children}
-						</ThemeProvider>
+						{children}
 						<Toaster />
 					</AuthProvider>
 				</SWRConfig>

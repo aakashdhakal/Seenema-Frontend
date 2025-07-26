@@ -6,12 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Icon } from "@iconify/react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
 
-export default function PosterCard({ video, onclick }) {
+export default function PosterCard({ video, onClick }) {
+	console.log(video);
 	const [isHovered, setIsHovered] = useState(false);
 	const [isImageLoading, setIsImageLoading] = useState(true);
 	const [isWatchlisted, setIsWatchlisted] = useState(false);
 	const { theme } = useTheme();
+	const router = useRouter();
 
 	const handleWatchlistToggle = (e) => {
 		e.stopPropagation();
@@ -20,12 +23,14 @@ export default function PosterCard({ video, onclick }) {
 
 	const handlePlay = (e) => {
 		e.stopPropagation();
-		onclick();
+		console.log("Play button clicked for video:", video.title);
+		onClick();
 	};
 
 	const handleInfo = (e) => {
 		e.stopPropagation();
-		// Add info logic here
+		console.log("Info button clicked for video:", video.title);
+		router.push(`/video/${video.slug}`);
 	};
 
 	return (
@@ -33,7 +38,7 @@ export default function PosterCard({ video, onclick }) {
 			className="group flex-shrink-0 cursor-pointer transition-all duration-500 hover:scale-105"
 			onMouseEnter={() => setIsHovered(true)}
 			onMouseLeave={() => setIsHovered(false)}
-			onClick={onclick}>
+			onClick={onClick}>
 			<div className="relative w-52 h-80 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500">
 				{/* Loading Skeleton */}
 				{isImageLoading && (
@@ -52,8 +57,8 @@ export default function PosterCard({ video, onclick }) {
 
 				{/* Poster Image */}
 				<Image
-					src={video.poster}
-					alt={video.title}
+					src={video.poster || "/placeholder.png"}
+					alt={video.title || "Video Poster"}
 					fill
 					className={`object-cover transition-transform duration-500 group-hover:scale-110 ${
 						isImageLoading ? "opacity-0" : "opacity-100"
@@ -69,9 +74,9 @@ export default function PosterCard({ video, onclick }) {
 							NEW
 						</Badge>
 					)}
-					{video.quality && (
+					{video.resolutions && (
 						<Badge className="bg-black/60 text-white text-xs px-2 py-1 backdrop-blur-sm">
-							{video.quality}
+							{video.resolutions[video.resolutions.length - 1]}
 						</Badge>
 					)}
 				</div>

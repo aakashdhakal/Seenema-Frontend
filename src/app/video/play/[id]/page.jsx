@@ -1,31 +1,36 @@
 "use client";
+
 import { initializeVideoStream } from "@/lib/player";
-import { useEffect, useRef, useState, use } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	getMainManifest,
 	getManifestByResolution,
-	getManifestBySegment,
 	getVideoData,
 	parseManifest,
 	getAvailableResolutions,
-	getSegmentSizes,
 	updateWatchHistory,
 } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
 import CustomDropdown from "@/components/singleComponents/CustomDropdown";
 import { Icon } from "@iconify/react";
+import { useSearchParams, useParams } from "next/navigation";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 
-export default function VideoPage({ params }) {
+export default function VideoPage() {
 	const videoRef = useRef(null);
-	const { id: videoId } = use(params);
+	const params = useParams();
+	const { id: videoId } = params;
+	const searchParams = useSearchParams();
+	const router = useRouter();
+
+	// State for video data and streaming
 	const [videoData, setVideoData] = useState({});
 	const [resolutionList, setResolutionList] = useState([]);
 	const [resolution, setResolution] = useState("Auto");
-	const [segmentList, setSegmentList] = useState({});
-
-	const backendURL = process.env.BACKEND_API_URL || "http://localhost:8000/";
+	const [segmentList, setSegmentList] = useState([]);
+	const [initialSeekTime, setInitialSeekTime] = useState(0);
 
 	// Video control states
 	const [isPlaying, setIsPlaying] = useState(false);
@@ -42,18 +47,23 @@ export default function VideoPage({ params }) {
 	const [playbackRate, setPlaybackRate] = useState(1);
 	const [isLoading, setIsLoading] = useState(true);
 
-	let controlsTimeout = useRef(null);
+	const controlsTimeout = useRef(null);
+	const wasPlayingRef = useRef(false);
 
+	// Effect to fetch initial video metadata and manifest
 	useEffect(() => {
 		if (!videoId) return;
 
-		// Fetch video metadata
+		const startTime = parseFloat(searchParams.get("t"));
+		if (!isNaN(startTime) && startTime > 0) {
+			setInitialSeekTime(startTime);
+		}
+
 		const fetchVideoData = async () => {
 			try {
 				const video = await getVideoData(videoId);
 				if (!video) throw new Error("Failed to fetch video data");
 				setVideoData(video);
-				console.log("Video data fetched:", video);
 				document.title = video.title || "Seenema Video Player";
 			} catch (err) {
 				console.error("Error fetching video data:", err);
@@ -70,15 +80,14 @@ export default function VideoPage({ params }) {
 				console.error("Error fetching main manifest:", err);
 			}
 		};
+
 		fetchVideoData();
 		fetchMainManifest();
-	}, [videoId]);
+	}, [videoId, searchParams]);
 
-	// Update segment list when resolution changes
+	// Effect to fetch segment list for timing info
 	useEffect(() => {
-		if (!videoId || !resolution) {
-			return;
-		}
+		if (!videoId) return;
 		const fetchSegmentList = async () => {
 			try {
 				const manifest = await getManifestByResolution(videoId, "144p");
@@ -91,46 +100,60 @@ export default function VideoPage({ params }) {
 			}
 		};
 		fetchSegmentList();
-	}, [resolution, videoId]);
+	}, [videoId]);
 
+	// Effect to initialize or re-initialize the video stream
 	useEffect(() => {
+		let stream;
 		if (
 			videoRef.current &&
-			Object.keys(segmentList).length > 0 &&
-			resolution &&
+			segmentList.length > 0 &&
+			resolutionList.length > 0 &&
 			videoData?.duration
 		) {
-			console.log("Initializing video stream with segments:", resolutionList);
 			const startStream = async () => {
+				wasPlayingRef.current = videoRef.current && !videoRef.current.paused;
 				setIsLoading(true);
-				console.log("Starting video stream initialization...");
-				// Initialize the video stream with the selected resolution and segments
-				await initializeVideoStream(
+
+				const timeToSeek =
+					videoRef.current.currentTime > 0 &&
+					!isNaN(videoRef.current.currentTime)
+						? videoRef.current.currentTime
+						: initialSeekTime;
+
+				stream = await initializeVideoStream(
 					videoRef.current,
 					videoId,
 					segmentList,
 					resolutionList,
-					videoData.duration + 9, // or just videoData.duration
+					videoData.duration + 9,
+					null,
+					timeToSeek,
+					resolution,
 				).catch((err) => {
 					console.error("Error initializing video stream:", err);
 				});
-				setIsLoading(false);
 			};
 			startStream();
 		}
-	}, [segmentList, videoId, resolution, resolutionList, videoData.duration]);
 
-	// useEffect(() => {
-	// 	if (!videoId) return;
-	// 	const interval = setInterval(() => {
-	// 		updateWatchHistory(videoId, currentTime);
-	// 	}, 10000); // every 30 seconds
-	// 	return () => clearInterval(interval);
-	// }, [videoId, currentTime]);
+		return () => {
+			if (stream && stream.destroy) {
+				stream.destroy();
+			}
+		};
+	}, [
+		segmentList,
+		videoId,
+		resolution,
+		resolutionList,
+		videoData.duration,
+		initialSeekTime,
+	]);
 
+	// Effect for keyboard shortcuts
 	useEffect(() => {
 		const handleKeyDown = (e) => {
-			// Prevent shortcuts when typing in an input/textarea
 			if (
 				document.activeElement.tagName === "INPUT" ||
 				document.activeElement.tagName === "TEXTAREA" ||
@@ -190,45 +213,31 @@ export default function VideoPage({ params }) {
 			setBufferInfo({ bufferedTime: 0, bufferedPercentage: 0 });
 			return;
 		}
-
 		let maxBufferedEnd = 0;
 		const currentTime = video.currentTime;
-
 		for (let i = 0; i < video.buffered.length; i++) {
-			const start = video.buffered.start(i);
-			const end = video.buffered.end(i);
-
-			// Check if this range contains or is ahead of current time
-			if (currentTime >= start && currentTime <= end) {
-				maxBufferedEnd = end;
+			if (
+				currentTime >= video.buffered.start(i) &&
+				currentTime <= video.buffered.end(i)
+			) {
+				maxBufferedEnd = video.buffered.end(i);
 				break;
 			}
 		}
-
 		const bufferedTime = Math.max(0, maxBufferedEnd - currentTime);
 		const bufferedPercentage = Math.min(
 			((currentTime + bufferedTime) / duration) * 100,
 			100,
 		);
-
-		setBufferInfo({
-			bufferedTime,
-			bufferedPercentage,
-		});
+		setBufferInfo({ bufferedTime, bufferedPercentage });
 	};
-
-	const seekedSegment = () => {};
 
 	// Control functions
 	const togglePlayPause = () => {
 		const video = videoRef.current;
 		if (!video) return;
-
-		if (isPlaying) {
-			video.pause();
-		} else {
-			video.play();
-		}
+		if (isPlaying) video.pause();
+		else video.play();
 	};
 
 	const toggleMute = () => {
@@ -243,9 +252,7 @@ export default function VideoPage({ params }) {
 		const volumeValue = newVolume[0] / 100;
 		video.volume = volumeValue;
 		setVolume(newVolume[0]);
-		if (volumeValue > 0 && isMuted) {
-			video.muted = false;
-		}
+		if (volumeValue > 0 && isMuted) video.muted = false;
 	};
 
 	const handleSeek = (newTime) => {
@@ -260,11 +267,11 @@ export default function VideoPage({ params }) {
 
 	const toggleFullscreen = () => {
 		if (!document.fullscreenElement) {
-			document.documentElement.requestFullscreen();
-			setIsFullscreen(true);
+			document.documentElement
+				.requestFullscreen()
+				.then(() => setIsFullscreen(true));
 		} else {
-			document.exitFullscreen();
-			setIsFullscreen(false);
+			document.exitFullscreen().then(() => setIsFullscreen(false));
 		}
 	};
 
@@ -284,12 +291,9 @@ export default function VideoPage({ params }) {
 		setPlaybackRate(rate);
 	};
 
-	// Auto-hide controls
 	const resetControlsTimeout = () => {
 		setShowControls(true);
-		if (controlsTimeout.current) {
-			clearTimeout(controlsTimeout.current);
-		}
+		if (controlsTimeout.current) clearTimeout(controlsTimeout.current);
 		controlsTimeout.current = setTimeout(() => {
 			if (isPlaying) setShowControls(false);
 		}, 5000);
@@ -302,7 +306,6 @@ export default function VideoPage({ params }) {
 		return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 	};
 
-	// Calculate progress percentage
 	const progressPercentage = duration
 		? Math.min((currentTime / duration) * 100, 100)
 		: 0;
@@ -312,16 +315,15 @@ export default function VideoPage({ params }) {
 			className="fixed inset-0 w-screen h-screen bg-black"
 			onMouseMove={resetControlsTimeout}
 			onMouseLeave={() => isPlaying && setShowControls(false)}>
-			{/* Video Element - Fixed duplicate handlers */}
 			<video
 				ref={videoRef}
 				id="video"
-				autoPlay
 				muted
+				autoPlay
 				className="w-full h-full object-cover"
 				onTimeUpdate={() => {
 					const video = videoRef.current;
-					if (video) {
+					if (video && !isLoading) {
 						setCurrentTime(video.currentTime);
 						updateBufferInfo();
 					}
@@ -329,7 +331,10 @@ export default function VideoPage({ params }) {
 				onDurationChange={() => setDuration(videoRef.current?.duration || 0)}
 				onProgress={updateBufferInfo}
 				onPlay={() => setIsPlaying(true)}
-				onPause={() => setIsPlaying(false)}
+				onPause={() => {
+					setIsPlaying(false);
+					updateWatchHistory(videoId, currentTime);
+				}}
 				onVolumeChange={() => {
 					const video = videoRef.current;
 					setVolume((video?.volume || 0) * 100);
@@ -338,6 +343,9 @@ export default function VideoPage({ params }) {
 				onLoadedData={() => {
 					setIsLoading(false);
 					updateBufferInfo();
+					if (wasPlayingRef.current) {
+						videoRef.current.play().catch((e) => console.warn(e.message));
+					}
 				}}
 				onCanPlay={() => {
 					setIsLoading(false);
@@ -345,20 +353,28 @@ export default function VideoPage({ params }) {
 				}}
 				onWaiting={() => setIsLoading(true)}
 				onError={(e) => console.error("Video error", e.target.error)}
+				onEnded={() => {
+					setIsPlaying(false);
+					updateWatchHistory(videoId, currentTime);
+					router.push(`/video/${videoData.slug}`);
+				}}
 				poster={videoData.backdrop_path || ""}
-				onEnded={() => {}}
 			/>
 
-			{/* Loading Overlay */}
 			{isLoading && (
-				<div className="absolute inset-0 flex items-center justify-center bg-black/50">
-					<div className="text-center">
-						<div className="spinner w-12 h-12 mx-auto mb-4"></div>
+				<div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
+					<div className="animate-pulse">
+						<Image
+							src={"/4.png"}
+							alt="Loading"
+							width={100}
+							height={100}
+							className="w-24 h-24 object-contain opacity-80"
+						/>
 					</div>
 				</div>
 			)}
 
-			{/* Center Play/Pause Button */}
 			<div
 				className="absolute inset-0 flex items-center justify-center cursor-pointer"
 				onClick={togglePlayPause}>
@@ -369,48 +385,36 @@ export default function VideoPage({ params }) {
 				)}
 			</div>
 
-			{/* Custom Controls */}
 			<div
 				className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent transition-opacity duration-300 ${
-					showControls ? "opacity-100" : "opacity-0"
+					showControls ? "opacity-100" : "opacity-0 pointer-events-none"
 				}`}>
-				{/* Progress Bar */}
 				<div className="px-4 pb-2">
-					<div className="relative">
-						{/* Buffer Progress (behind current progress) */}
-						<div className="absolute top-1/2 transform -translate-y-1/2 w-full h-1 bg-transparent rounded-full z-10">
-							{console.log("Buffer Info:", bufferInfo)}
+					<div className="relative group">
+						<div className="absolute top-1/2 transform -translate-y-1/2 w-full h-1 bg-white/20 rounded-full z-10">
 							<div
 								className="h-full bg-white/50 rounded-full transition-all duration-300"
 								style={{
 									width: `${Math.min(bufferInfo.bufferedPercentage, 100)}%`,
-									opacity: 0.6,
 								}}
 							/>
-						</div>
-						{/* Current Progress (on top) */}
-						<div className="absolute top-1/2 transform -translate-y-1/2 w-full h-1 bg-white/20 rounded-full">
 							<div
-								className="h-full  rounded-full transition-all duration-100"
+								className="h-full bg-primary rounded-full absolute top-0 left-0 transition-all duration-100"
 								style={{ width: `${Math.min(progressPercentage, 100)}%` }}
 							/>
 						</div>
-						{/* Seek Slider */}
 						<Slider
 							value={[currentTime]}
 							max={duration || 100}
 							step={0.1}
 							onValueChange={handleSeek}
-							className="w-full cursor-pointer relative z-10 custom-transparent-range"
+							className="w-full cursor-pointer relative z-20 custom-transparent-range custom-slider-thumb"
 						/>
 					</div>
 				</div>
 
-				{/* Control Bar */}
 				<div className="flex items-center justify-between px-4 pb-4">
-					{/* Left Controls */}
 					<div className="flex items-center space-x-3">
-						{/* Play/Pause */}
 						<Button
 							variant="ghost"
 							size="sm"
@@ -421,8 +425,6 @@ export default function VideoPage({ params }) {
 								className="w-6 h-6"
 							/>
 						</Button>
-
-						{/* Skip Backward */}
 						<Button
 							variant="ghost"
 							size="sm"
@@ -433,8 +435,6 @@ export default function VideoPage({ params }) {
 								className="w-5 h-5"
 							/>
 						</Button>
-
-						{/* Skip Forward */}
 						<Button
 							variant="ghost"
 							size="sm"
@@ -445,8 +445,6 @@ export default function VideoPage({ params }) {
 								className="w-5 h-5"
 							/>
 						</Button>
-
-						{/* Volume Controls */}
 						<div className="flex items-center space-x-2">
 							<Button
 								variant="ghost"
@@ -474,33 +472,24 @@ export default function VideoPage({ params }) {
 								/>
 							</div>
 						</div>
-
-						{/* Time Display */}
 						<div className="text-white text-sm">
 							{formatTime(currentTime)} / {formatTime(duration || 0)}
 						</div>
 					</div>
 
-					{/* Right Controls */}
 					<div className="flex items-center space-x-3">
-						{/* Playback Speed */}
 						<CustomDropdown
 							options={[0.5, 1, 1.5, 2]}
 							selectedOption={playbackRate + "X"}
 							onSelect={handlePlaybackRateChange}
 						/>
-
-						{/* Quality Selector */}
 						<CustomDropdown
 							options={["Auto", ...resolutionList]}
 							selectedOption={resolution}
 							onSelect={(res) => {
-								setResolution(res);
-								setSegmentList({});
+								if (res !== resolution) setResolution(res);
 							}}
 						/>
-
-						{/* Picture in Picture */}
 						<Button
 							variant="ghost"
 							size="sm"
@@ -508,8 +497,6 @@ export default function VideoPage({ params }) {
 							className="text-white hover:text-primary hover:bg-white/10">
 							<Icon icon="solar:pip-bold" className="w-5 h-5" />
 						</Button>
-
-						{/* Fullscreen */}
 						<Button
 							variant="ghost"
 							size="sm"
@@ -528,15 +515,14 @@ export default function VideoPage({ params }) {
 				</div>
 			</div>
 
-			{/* Video Info Overlay */}
 			{videoData.title && showControls && (
-				<div className="absolute top-4 left-4 right-4 w-max">
+				<div className="absolute top-4 left-4 right-4 w-max pointer-events-none">
 					<div className="bg-black/30 rounded-lg p-2 backdrop-blur-sm">
 						<h1 className="text-white text-xl font-bold mb-0">
 							{videoData.title}
-							{videoData.created_at && (
+							{videoData.release_year && (
 								<span className="text-white/70 text-lg font-normal ml-2">
-									({videoData.created_at.split("T")[0].split("-")[0]})
+									({videoData.release_year})
 								</span>
 							)}
 						</h1>

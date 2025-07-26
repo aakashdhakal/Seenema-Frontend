@@ -22,7 +22,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { uploadVideo } from "@/lib/helper";
+import { Progress } from "@/components/ui/progress"; // NEW: Import Progress component
 
 export default function VideoUploadPage() {
 	const router = useRouter();
@@ -36,15 +36,18 @@ export default function VideoUploadPage() {
 	const [creditDialogOpen, setCreditDialogOpen] = useState(false);
 	const [genreInput, setGenreInput] = useState("");
 	const [tagInput, setTagInput] = useState("");
+	const [isCreatingPerson, setIsCreatingPerson] = useState(false);
+	const [uploading, setUploading] = useState(false);
+	const [uploadProgress, setUploadProgress] = useState(0); // NEW: State for upload progress
 
-	// Form data - store actual File objects for images
+	// Form data
 	const [formData, setFormData] = useState({
 		title: "",
 		description: "",
 		genres: [],
 		tags: [],
-		poster: null, // Store actual File object
-		backdrop: null, // Store actual File object
+		poster: null,
+		backdrop: null,
 		contentRating: "",
 		visibility: "public",
 		language: "en",
@@ -57,7 +60,7 @@ export default function VideoUploadPage() {
 	const [posterPreview, setPosterPreview] = useState(null);
 	const [backdropPreview, setBackdropPreview] = useState(null);
 
-	// Credit input - added role field
+	// Credit input
 	const [creditInput, setCreditInput] = useState({
 		selectedPerson: "",
 		creditedAs: "",
@@ -90,17 +93,7 @@ export default function VideoUploadPage() {
 		{ value: "zh", label: "Chinese" },
 		{ value: "hi", label: "Hindi" },
 		{ value: "ar", label: "Arabic" },
-	];
-
-	const roleOptions = [
-		{ value: "actor", label: "Actor" },
-		{ value: "director", label: "Director" },
-		{ value: "producer", label: "Producer" },
-		{ value: "writer", label: "Writer" },
-		{ value: "cinematographer", label: "Cinematographer" },
-		{ value: "editor", label: "Editor" },
-		{ value: "composer", label: "Composer" },
-		{ value: "other", label: "Other" },
+		{ value: "np", label: "Nepali" },
 	];
 
 	const steps = [
@@ -114,7 +107,7 @@ export default function VideoUploadPage() {
 		},
 	];
 
-	// Fetch data
+	// Fetch initial data for genres and people
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
@@ -131,11 +124,12 @@ export default function VideoUploadPage() {
 		fetchData();
 	}, []);
 
-	// File upload
+	// react-dropzone handler
 	const onDrop = useCallback((acceptedFiles) => {
 		const file = acceptedFiles[0];
 		if (file) {
 			if (file.size > 10 * 1024 * 1024 * 1024) {
+				// 10 GB limit
 				toast.error("File size must be less than 10GB");
 				return;
 			}
@@ -145,7 +139,6 @@ export default function VideoUploadPage() {
 			setPreviewUrl(videoUrl);
 			setCurrentStep(2);
 
-			// Extract video metadata
 			const video = document.createElement("video");
 			video.src = videoUrl;
 			video.onloadedmetadata = () => {
@@ -179,20 +172,10 @@ export default function VideoUploadPage() {
 		setFormData((prev) => ({ ...prev, [field]: value }));
 	};
 
-	// Genre management
 	const addGenre = (genreValue) => {
-		let genreName;
-		if (availableGenres.includes(genreValue)) {
-			genreName = genreValue;
-		} else {
-			genreName = typeof genreValue === "string" ? genreValue.trim() : null;
-		}
-
+		let genreName = typeof genreValue === "string" ? genreValue.trim() : null;
 		if (genreName && !formData.genres.includes(genreName)) {
-			setFormData((prev) => ({
-				...prev,
-				genres: [...prev.genres, genreName],
-			}));
+			setFormData((prev) => ({ ...prev, genres: [...prev.genres, genreName] }));
 			setGenreInput("");
 		}
 	};
@@ -204,7 +187,6 @@ export default function VideoUploadPage() {
 		}));
 	};
 
-	// Tag management
 	const addTag = () => {
 		if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
 			setFormData((prev) => ({
@@ -222,22 +204,18 @@ export default function VideoUploadPage() {
 		}));
 	};
 
-	// Credits management
 	const handleAddCredit = () => {
 		if (!creditInput.selectedPerson) {
 			toast.error("Please select a person");
 			return;
 		}
-
 		const person = people.find(
 			(p) => p.id === parseInt(creditInput.selectedPerson),
 		);
 		if (!person) return;
-
 		const existingCredit = formData.credits?.find(
 			(c) => c.person_id === parseInt(creditInput.selectedPerson),
 		);
-
 		if (!existingCredit) {
 			setFormData((prev) => ({
 				...prev,
@@ -259,17 +237,17 @@ export default function VideoUploadPage() {
 	const removeCredit = (personId) => {
 		setFormData((prev) => ({
 			...prev,
-			credits: prev.credits?.filter((c) => !(c.person_id === personId)) || [],
+			credits: prev.credits?.filter((c) => c.person_id !== personId) || [],
 		}));
 	};
 
-	// Create new person
 	const handleCreatePerson = async () => {
+		setIsCreatingPerson(true);
 		if (!newPersonForm.name.trim()) {
 			toast.error("Please enter a name");
+			setIsCreatingPerson(false);
 			return;
 		}
-
 		try {
 			const personData = new FormData();
 			personData.append("name", newPersonForm.name);
@@ -277,97 +255,118 @@ export default function VideoUploadPage() {
 			if (newPersonForm.profileImage) {
 				personData.append("profile_picture", newPersonForm.profileImage);
 			}
-
 			const response = await axios.post("/addPerson", personData, {
 				headers: { "Content-Type": "multipart/form-data" },
 			});
-
 			const newPerson = response.data;
 			setPeople((prev) => [...prev, newPerson]);
-			setCreditInput((prev) => ({ ...prev, selectedPerson: newPerson.id }));
+			setCreditInput((prev) => ({
+				...prev,
+				selectedPerson: newPerson.id.toString(),
+			}));
 			setNewPersonForm({ name: "", biography: "", profileImage: null });
 			setCreditDialogOpen(false);
 			toast.success("Person added successfully!");
 		} catch (error) {
 			console.error("Error creating person:", error);
-			toast.error("Failed to add person. Please try again.");
+			toast.error(error.response?.data?.message || "Failed to add person.");
+		} finally {
+			setIsCreatingPerson(false);
 		}
 	};
 
-	// FIXED: Image upload handler - stores File object and creates preview
 	const handleImageUpload = (field, file) => {
 		if (file) {
-			// Store the actual File object in formData
-			setFormData((prev) => ({
-				...prev,
-				[field]: file,
-			}));
-
-			// Create preview URL and store in separate state
+			setFormData((prev) => ({ ...prev, [field]: file }));
 			const previewUrl = URL.createObjectURL(file);
-			if (field === "poster") {
-				setPosterPreview(previewUrl);
-			} else if (field === "backdrop") {
-				setBackdropPreview(previewUrl);
-			}
+			if (field === "poster") setPosterPreview(previewUrl);
+			else if (field === "backdrop") setBackdropPreview(previewUrl);
 		}
 	};
 
-	// FIXED: Form submission
+	// MODIFIED: handleSubmit function with chunking logic
 	const handleSubmit = async () => {
-		// Validation
-		if (!uploadedFile) {
-			toast.error("Please select a video file");
+		// --- Step 1: Validation ---
+		if (
+			!uploadedFile ||
+			!formData.title.trim() ||
+			!formData.poster ||
+			!formData.backdrop ||
+			formData.genres.length === 0
+		) {
+			toast.error(
+				"Please fill all required fields: Video, Title, Poster, Backdrop, and at least one Genre.",
+			);
 			return;
 		}
-		if (!formData.title.trim()) {
-			toast.error("Please enter a video title");
-			return;
-		}
-		if (!formData.genres || formData.genres.length === 0) {
-			toast.error("Please add at least one genre");
-			return;
-		}
-		if (!formData.poster) {
-			toast.error("Please upload a poster image");
-			return;
-		}
-		if (!formData.backdrop) {
-			toast.error("Please upload a backdrop image");
-			return;
-		}
+		setUploading(true);
+		setUploadProgress(0);
 
 		try {
-			const uploadFormData = new FormData();
+			// --- Step 2: Create video entry with metadata ---
+			const metadataForm = new FormData();
+			metadataForm.append("title", formData.title);
+			metadataForm.append("description", formData.description);
+			metadataForm.append("poster", formData.poster);
+			metadataForm.append("backdrop", formData.backdrop);
+			metadataForm.append("original_filename", uploadedFile.name);
+			metadataForm.append("releaseYear", formData.releaseYear);
+			metadataForm.append("contentRating", formData.contentRating);
+			metadataForm.append("visibility", formData.visibility);
+			metadataForm.append("language", formData.language);
 
-			// Append files
-			uploadFormData.append("video", uploadedFile);
-			uploadFormData.append("poster", formData.poster); // File object
-			uploadFormData.append("backdrop", formData.backdrop); // File object
-
-			// Append text data
-			uploadFormData.append("title", formData.title);
-			uploadFormData.append("description", formData.description);
-			uploadFormData.append("contentRating", formData.contentRating);
-			uploadFormData.append("visibility", formData.visibility);
-			uploadFormData.append("language", formData.language);
-			uploadFormData.append("credits", JSON.stringify(formData.credits));
-			uploadFormData.append("releaseYear", formData.releaseYear);
-
-			const response = await uploadVideo(
-				uploadFormData,
-				formData.genres,
-				formData.tags,
-				formData.credits,
+			const createResponse = await axios.post(
+				"/createVideoEntry",
+				metadataForm,
+				{
+					headers: { "Content-Type": "multipart/form-data" },
+				},
 			);
-			toast.success("Video uploaded successfully!");
+			const { video_id } = createResponse.data;
+
+			// --- Step 3: Upload file in chunks ---
+			const chunkSize = 5 * 1024 * 1024; // 5MB
+			const totalChunks = Math.ceil(uploadedFile.size / chunkSize);
+
+			for (let i = 0; i < totalChunks; i++) {
+				const start = i * chunkSize;
+				const end = Math.min(start + chunkSize, uploadedFile.size);
+				const chunk = uploadedFile.slice(start, end);
+				const chunkForm = new FormData();
+				chunkForm.append("video_id", video_id);
+				chunkForm.append("chunk", chunk, uploadedFile.name);
+				chunkForm.append("is_last", i === totalChunks - 1);
+
+				await axios.post("/uploadVideoChunk", chunkForm);
+				setUploadProgress(Math.round((end / uploadedFile.size) * 100));
+			}
+
+			// --- Step 4: Add related data (genres, tags, credits) ---
+			if (formData.genres.length > 0)
+				await axios.post("/addGenreToVideo", {
+					videoId: video_id,
+					genres: formData.genres,
+				});
+			if (formData.tags.length > 0)
+				await axios.post("/addTagsToVideo", {
+					videoId: video_id,
+					tags: formData.tags,
+				});
+			if (formData.credits.length > 0)
+				await axios.post("/addCreditsToVideo", {
+					videoId: video_id,
+					credits: formData.credits,
+				});
+
+			toast.success("Upload complete! Your video is now being processed.");
 			router.push("/admin/videos");
 		} catch (error) {
 			console.error("Upload error:", error);
-			const errorMessage =
-				error.response?.data?.message ||
-				"Failed to upload video. Please try again.";
-			toast.error(errorMessage);
+			toast.error(
+				error.response?.data?.message || "An error occurred during upload.",
+			);
+		} finally {
+			setUploading(false);
 		}
 	};
 
@@ -391,7 +390,7 @@ export default function VideoUploadPage() {
 								className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors ${
 									currentStep >= step.id
 										? "bg-primary border-primary text-primary-foreground"
-										: "border-muted bg-background text-muted-foreground"
+										: "border bg-background text-muted-foreground"
 								}`}>
 								{currentStep > step.id ? (
 									<Icon icon="mingcute:check-fill" className="w-5 h-5" />
@@ -412,7 +411,7 @@ export default function VideoUploadPage() {
 							{index < steps.length - 1 && (
 								<div
 									className={`w-24 h-0.5 mx-4 ${
-										currentStep > step.id ? "bg-primary" : "bg-muted"
+										currentStep > step.id ? "bg-primary" : "bg-border"
 									}`}
 								/>
 							)}
@@ -420,6 +419,24 @@ export default function VideoUploadPage() {
 					))}
 				</div>
 			</div>
+
+			{/* NEW: Show progress overlay during upload */}
+			{uploading && (
+				<div className="fixed inset-0 bg-black/60 z-50 flex flex-col items-center justify-center">
+					<div className="bg-card p-8 rounded-lg shadow-xl w-full max-w-md text-center">
+						<h2 className="text-2xl font-bold mb-4 text-foreground">
+							Uploading Video
+						</h2>
+						<p className="text-muted-foreground mb-6">
+							Please wait while we upload your file. Do not close this window.
+						</p>
+						<Progress value={uploadProgress} className="w-full" />
+						<p className="text-lg font-semibold mt-4 text-primary">
+							{uploadProgress}%
+						</p>
+					</div>
+				</div>
+			)}
 
 			{/* Step 1: File Upload */}
 			{currentStep === 1 && (
@@ -720,7 +737,7 @@ export default function VideoUploadPage() {
 							</CardHeader>
 							<CardContent className="space-y-6">
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-									{/* FIXED: Poster Upload */}
+									{/* Poster Upload */}
 									<div className="space-y-2">
 										<Label>Poster *</Label>
 										<Input
@@ -762,7 +779,7 @@ export default function VideoUploadPage() {
 										</p>
 									</div>
 
-									{/* FIXED: Backdrop Upload */}
+									{/* Backdrop Upload */}
 									<div className="space-y-2">
 										<Label>Backdrop *</Label>
 										<Input
@@ -1220,7 +1237,28 @@ export default function VideoUploadPage() {
 									router.push("/admin/videos");
 								}}
 							/>
-							<Button onClick={handleSubmit} className="min-w-[140px]"></Button>
+							<Button
+								onClick={handleSubmit}
+								className="min-w-[160px]"
+								disabled={uploading}>
+								{uploading ? (
+									<div className="flex items-center">
+										<Icon
+											icon="svg-spinners:180-ring-with-bg"
+											className="mr-2 h-4 w-4"
+										/>
+										<span>Uploading...</span>
+									</div>
+								) : (
+									<>
+										<Icon
+											icon="solar:upload-bold-duotone"
+											className="mr-2 h-4 w-4"
+										/>
+										Upload & Publish
+									</>
+								)}
+							</Button>
 						</div>
 					</div>
 				</div>
@@ -1325,7 +1363,19 @@ export default function VideoUploadPage() {
 							}}>
 							Cancel
 						</Button>
-						<Button onClick={handleCreatePerson}>Create Person</Button>
+						<Button onClick={handleCreatePerson} disabled={isCreatingPerson}>
+							{isCreatingPerson ? (
+								<div className="flex items-center">
+									<Icon
+										icon="svg-spinners:180-ring-with-bg"
+										className="mr-2 h-4 w-4"
+									/>
+									<span>Creating...</span>
+								</div>
+							) : (
+								"Create Person"
+							)}
+						</Button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
