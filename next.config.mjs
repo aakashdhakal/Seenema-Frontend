@@ -14,6 +14,11 @@ const nextConfig = {
 			"image.tmdb.org",
 			"www.themoviedb.org",
 			"i.imgur.com",
+			"avatars.githubusercontent.com",
+			"lh3.googleusercontent.com",
+			"res.cloudinary.com",
+			"seenemaapi.aakashdhakal.com.np",
+			"seenema.aakashdhakal.com.np",
 		],
 	},
 };
