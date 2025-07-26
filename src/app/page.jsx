@@ -203,17 +203,17 @@ export default function HomePage() {
 						</div>
 						<div className="flex space-x-6 text-gray-400">
 							<Link
-								href="/privacy"
+								href="/"
 								className="hover:text-white transition-colors">
 								Privacy
 							</Link>
 							<Link
-								href="/terms"
+								href="/"
 								className="hover:text-white transition-colors">
 								Terms
 							</Link>
 							<Link
-								href="/contact"
+								href="/"
 								className="hover:text-white transition-colors">
 								Contact
 							</Link>

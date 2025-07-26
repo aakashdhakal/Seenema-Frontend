@@ -16,15 +16,15 @@ export default function Footer() {
 			{ name: "Popular", href: "/popular" },
 		],
 		support: [
-			{ name: "Help Center", href: "/help" },
-			{ name: "Contact Us", href: "/contact" },
+			{ name: "Help Center", href: "/" },
+			{ name: "Contact Us", href: "/" },
 			{ name: "FAQ", href: "/faq" },
-			{ name: "Report Issue", href: "/report" },
+			{ name: "Report Issue", href: "/" },
 		],
 		legal: [
-			{ name: "Terms of Service", href: "/terms" },
-			{ name: "Privacy Policy", href: "/privacy" },
-			{ name: "Cookie Policy", href: "/cookies" },
+			{ name: "Terms of Service", href: "/" },
+			{ name: "Privacy Policy", href: "/" },
+			{ name: "Cookie Policy", href: "/" },
 		],
 	};
 
