@@ -228,7 +228,7 @@ export default function LoginPage() {
 										variant="link"
 										className="p-0 h-auto text-sm text-primary hover:text-primary/80"
 										asChild>
-										<Link href="/forgot-password">Forgot password?</Link>
+										<Link href="/">Forgot password?</Link>
 									</Button>
 								</div>
 
@@ -285,13 +285,13 @@ export default function LoginPage() {
 					<p className="text-xs text-gray-400">
 						By signing in, you agree to our{" "}
 						<Link
-							href="/terms"
+							href="/"
 							className="text-primary hover:text-primary/80 transition-colors">
 							Terms of Service
 						</Link>{" "}
 						and{" "}
 						<Link
-							href="/privacy"
+							href="/"
 							className="text-primary hover:text-primary/80 transition-colors">
 							Privacy Policy
 						</Link>
