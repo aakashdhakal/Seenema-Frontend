@@ -5,9 +5,11 @@ import axios from "@/lib/axios"; // your globally pre-configured axiosClient
 // SWR fetcher using global axios
 const fetcher = (url) => axios.get(url).then((res) => res.data);
 
+const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 // Helper to call /sanctum/csrf-cookie (CSRF token gets auto-handled by axios)
 export const getCSRFToken = async () => {
-	await axios.get("http://localhost:8000/sanctum/csrf-cookie");
+	await axios.get(backendUrl + "/sanctum/csrf-cookie");
 };
 
 export const useAuth = () => {

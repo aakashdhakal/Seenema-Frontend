@@ -2,8 +2,10 @@
 import axios from "axios";
 import Cookies from "js-cookie"; // for CSRF token handling
 
+const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 const axiosClient = axios.create({
-	baseURL: "http://localhost:8000/api", // Laravel API
+	baseURL: backendUrl + "/api", // Laravel API
 	withCredentials: true, // Send cookies (laravel_session, XSRF-TOKEN)
 	headers: {
 		Accept: "application/json",

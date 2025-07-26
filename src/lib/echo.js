@@ -3,7 +3,7 @@ import Pusher from "pusher-js";
 import axiosInstance from "./axios"; // Import your configured Axios instance
 
 window.Pusher = Pusher;
-
+const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const echo = new Echo({
 	broadcaster: "reverb",
 	key: process.env.NEXT_PUBLIC_REVERB_APP_KEY,
@@ -20,7 +20,7 @@ const echo = new Echo({
 				// Use your Sanctum-configured axios instance to make the auth request.
 				// The browser will handle the cookies automatically.
 				axiosInstance
-					.post("http://localhost:8000/broadcasting/auth", {
+					.post(backendUrl + "/broadcasting/auth", {
 						socket_id: socketId,
 						channel_name: channel.name,
 					})

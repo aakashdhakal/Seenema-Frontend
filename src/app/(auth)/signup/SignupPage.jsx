@@ -69,6 +69,8 @@ export default function SignupPage() {
 	const router = useRouter();
 	const { registerUser, user, isLoading } = useAuthContext();
 
+	const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 	// Initialize form with react-hook-form and zod validation
 	const form = useForm({
 		resolver: zodResolver(signupSchema),
@@ -481,7 +483,7 @@ export default function SignupPage() {
 								variant="outline"
 								className="w-full h-12 bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20 transition-all"
 								asChild>
-								<a href="http://localhost:8000/api/auth/google/redirect">
+								<a href={backendUrl + "/api/auth/google/redirect"}>
 									<Icon icon="logos:google-icon" className="w-5 h-5 mr-3" />
 									Continue with Google
 								</a>
