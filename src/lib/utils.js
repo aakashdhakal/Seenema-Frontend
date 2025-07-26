@@ -234,3 +234,9 @@ export function formatDuration(seconds) {
 		.toString()
 		.padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
+
+export default function calculateSegment(seconds, totalSegments) {
+	const segmentDuration = Math.floor(seconds / totalSegments);
+	const segmentIndex = Math.floor(seconds / segmentDuration);
+	return segmentIndex < totalSegments ? segmentIndex : totalSegments - 1;
+}

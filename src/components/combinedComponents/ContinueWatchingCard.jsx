@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Icon } from "@iconify/react";
 import Image from "next/image";
 
@@ -16,18 +14,6 @@ const ContinueWatchingCard = ({
 }) => {
 	const [isHovered, setIsHovered] = useState(false);
 	const [imageLoaded, setImageLoaded] = useState(false);
-
-	// Format time remaining
-	const formatTimeRemaining = (seconds) => {
-		if (!seconds) return "Finished";
-		const hours = Math.floor(seconds / 3600);
-		const minutes = Math.floor((seconds % 3600) / 60);
-
-		if (hours > 0) {
-			return `${hours}h ${minutes}m left`;
-		}
-		return `${minutes}m left`;
-	};
 
 	// Format last watched date
 	const formatLastWatched = (dateString) => {

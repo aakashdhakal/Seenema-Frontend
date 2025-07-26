@@ -17,6 +17,7 @@ import { Icon } from "@iconify/react";
 import { useSearchParams, useParams } from "next/navigation";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { formatDuration } from "@/lib/utils";
 
 export default function VideoPage() {
 	const videoRef = useRef(null);
@@ -126,7 +127,7 @@ export default function VideoPage() {
 					videoId,
 					segmentList,
 					resolutionList,
-					videoData.duration + 9,
+					videoData.duration + 8,
 					null,
 					timeToSeek,
 					resolution,
@@ -473,7 +474,7 @@ export default function VideoPage() {
 							</div>
 						</div>
 						<div className="text-white text-sm">
-							{formatTime(currentTime)} / {formatTime(duration || 0)}
+							{formatDuration(currentTime)} / {formatDuration(duration || 0)}
 						</div>
 					</div>
 
