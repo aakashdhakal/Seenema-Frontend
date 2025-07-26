@@ -128,7 +128,7 @@ export default function HomePage() {
 					duration: formatDuration(featured.duration),
 					slug: featured.slug,
 					content_rating: featured.content_rating,
-					resolutions: featured.resolutions
+					resolutions: featured.resolutions,
 				});
 
 				// API Call 2: Get trending content
@@ -289,12 +289,6 @@ export default function HomePage() {
 				<div className="relative h-full flex items-center">
 					<div className="container mx-auto px-6">
 						<div className="max-w-3xl">
-							{/* Status Badge */}
-							<Badge className="mb-6 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground border-none px-4 py-2 text-sm shadow-lg">
-								<Icon icon="solar:fire-bold-duotone" className="w-4 h-4 mr-2" />
-								Featured Today
-							</Badge>
-
 							{/* Title */}
 							<h1 className="text-3xl md:text-7xl font-bold mb-8 leading-tight text-primary">
 								{featuredMovie.title}
