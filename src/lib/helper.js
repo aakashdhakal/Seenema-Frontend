@@ -57,3 +57,47 @@ const addCreditsToVideo = async (videoId, credits) => {
 		throw error;
 	}
 };
+
+export const addToWatchList = async (videoId) => {
+	try {
+		const response = await axios.post("/addToWatchList", { video_id: videoId });
+		return response.data;
+	} catch (error) {
+		console.error("Error adding to watch list:", error);
+		throw error;
+	}
+};
+
+export const removeFromWatchList = async (videoId) => {
+	try {
+		const response = await axios.post("/removeFromWatchList", {
+			video_id: videoId,
+		});
+		return response.data;
+	} catch (error) {
+		console.error("Error removing from watch list:", error);
+		throw error;
+	}
+};
+
+export const getWatchList = async () => {
+	try {
+		const response = await axios.get("/getWatchlist");
+		return response.data;
+	} catch (error) {
+		console.error("Error fetching watch list:", error);
+		throw error;
+	}
+};
+
+export const checkIfVideoInWatchList = async (videoId) => {
+	try {
+		const response = await axios.get("/checkIfVideoInWatchList", {
+			params: { video_id: videoId },
+		});
+		return response.data;
+	} catch (error) {
+		console.error("Error checking if video is in watch list:", error);
+		throw error;
+	}
+};

@@ -8,9 +8,14 @@ import Navbar from "@/components/combinedComponents/Navbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@iconify/react";
-import { useSearchParams } from "next/navigation";
 import axios from "@/lib/axios";
 import MovieRow from "@/components/combinedComponents/MovieRow";
+import {
+	checkIfVideoInWatchList,
+	addToWatchList,
+	removeFromWatchList,
+} from "@/lib/helper";
+import { toast } from "sonner";
 
 export default function HomePage() {
 	const { user, isLoading } = useAuthContext();
@@ -18,6 +23,8 @@ export default function HomePage() {
 	const [userData, setUserData] = useState(null);
 	const [mounted, setMounted] = useState(false);
 	const [loading, setLoading] = useState(true);
+	const [addWatchListLoading, setAddWatchListLoading] = useState(false);
+	const [isWatchlisted, setIsWatchlisted] = useState(false);
 	const [error, setError] = useState(null);
 
 	// State for each section
@@ -62,6 +69,34 @@ export default function HomePage() {
 		} catch (err) {
 			console.error("Error removing from continue watching:", err);
 		}
+	};
+
+	// Handle watchlist toggle
+	const handleWatchlistToggle = async (e) => {
+		setAddWatchListLoading(true);
+		const isVideoInWatchlist = await checkIfVideoInWatchList(featuredMovie.id);
+		if (isVideoInWatchlist.exists) {
+			setIsWatchlisted(true);
+		}
+		if (isWatchlisted) {
+			const response = await removeFromWatchList(featuredMovie.id);
+			if (response.success) {
+				setIsWatchlisted(false);
+				toast.success("Removed from watchlist");
+			} else {
+				toast.error("Failed to remove from watchlist");
+			}
+		} else {
+			const response = await addToWatchList(featuredMovie.id);
+			console.log("Watchlist response:", response);
+			if (response.success) {
+				setIsWatchlisted(true);
+				toast.success("Added to watchlist");
+			} else {
+				toast.error("Failed to add to watchlist");
+			}
+		}
+		setAddWatchListLoading(false);
 	};
 
 	// Handle movie click
@@ -352,21 +387,23 @@ export default function HomePage() {
 									Play Now
 								</Button>
 								<Button
-									variant="outline"
+									variant="secondary"
 									onClick={() => router.push(`/video/${featuredMovie.slug}`)}>
-									<Icon
-										icon="solar:info-circle-bold-duotone"
-										className="w-4 h-4 sm:w-5 md:w-6 lg:w-7 md:h-6 lg:h-7 mr-2 sm:mr-3"
-									/>
+									<Icon icon="ic:round-info" width="2em" height="2em" />
 									More Info
 								</Button>
-								<Button variant="ghost">
-									<Icon
-										icon="solar:bookmark-circle-bold-duotone"
-										className="w-4 h-4 sm:w-5 md:w-6 lg:w-7 md:h-6 lg:h-7 mr-2 sm:mr-3"
-									/>
-									<span className="hidden sm:inline">Add to List</span>
-									<span className="sm:hidden">Add</span>
+								<Button
+									variant="outline"
+									onClick={handleWatchlistToggle}
+									isLoading={addWatchListLoading}
+									loadingText={
+										<Icon
+											icon="eos-icons:bubble-loading"
+											width="2em"
+											height="2em"
+										/>
+									}>
+									<Icon icon={"solar:bookmark-linear"} className="w-4 h-4" />
 								</Button>
 							</div>
 						</div>

@@ -1,27 +1,55 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@iconify/react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
+import {
+	addToWatchList,
+	removeFromWatchList,
+	checkIfVideoInWatchList,
+} from "@/lib/helper";
+import { toast } from "sonner";
 
 export default function PosterCard({ video, onClick }) {
 	console.log(video);
 	const [isHovered, setIsHovered] = useState(false);
 	const [isImageLoading, setIsImageLoading] = useState(true);
 	const [isWatchlisted, setIsWatchlisted] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 	const { theme } = useTheme();
 	const router = useRouter();
 
-	const handleWatchlistToggle = (e) => {
+	const handleWatchlistToggle = async (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		setIsWatchlisted(!isWatchlisted);
-		// Add your watchlist API logic here
-		console.log("Watchlist toggled for video:", video.title);
+		setIsLoading(true);
+		const isVideoInWatchlist = await checkIfVideoInWatchList(video.id);
+		if (isVideoInWatchlist.exists) {
+			setIsWatchlisted(true);
+		}
+		if (isWatchlisted) {
+			const response = await removeFromWatchList(video.id);
+			if (response.success) {
+				setIsWatchlisted(false);
+				toast.success("Removed from watchlist");
+			} else {
+				toast.error("Failed to remove from watchlist");
+			}
+		} else {
+			const response = await addToWatchList(video.id);
+			console.log("Watchlist response:", response);
+			if (response.success) {
+				setIsWatchlisted(true);
+				toast.success("Added to watchlist");
+			} else {
+				toast.error("Failed to add to watchlist");
+			}
+		}
+		setIsLoading(false);
 	};
 
 	const handlePlay = (e) => {
@@ -127,21 +155,17 @@ export default function PosterCard({ video, onClick }) {
 
 							<Button
 								size="sm"
-								variant="ghost"
-								className={`p-2 rounded-full transition-all duration-200 ${
-									isWatchlisted
-										? "bg-primary text-white hover:bg-primary/90"
-										: "bg-white/20 backdrop-blur-sm text-white border border-white/30 hover:bg-primary hover:border-primary"
-								}`}
-								onClick={handleWatchlistToggle}>
-								<Icon
-									icon={
-										isWatchlisted
-											? "solar:bookmark-bold"
-											: "solar:bookmark-linear"
-									}
-									className="w-4 h-4"
-								/>
+								variant="outline"
+								onClick={handleWatchlistToggle}
+								isLoading={isLoading}
+								loadingText={
+									<Icon
+										icon="eos-icons:bubble-loading"
+										width="2em"
+										height="2em"
+									/>
+								}>
+								<Icon icon={"solar:bookmark-linear"} className="w-4 h-4" />
 							</Button>
 						</div>
 					</div>
