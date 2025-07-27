@@ -71,7 +71,7 @@ export default function HomePage() {
 
 	// Handle continue watching click
 	const handleContinueWatchingClick = (movie) => {
-		router.push(`/video/play/${movie.id}?t=${movie.currentTime}`);
+		router.push(`/video/watch/${movie.id}?t=${movie.currentTime}`);
 	};
 
 	// Handle hydration
@@ -254,13 +254,17 @@ export default function HomePage() {
 
 	if (error) {
 		return (
-			<div className="min-h-screen bg-background flex items-center justify-center">
-				<div className="text-center">
-					<h2 className="text-2xl font-bold mb-4 text-foreground">
+			<div className="min-h-screen bg-background flex items-center justify-center p-4">
+				<div className="text-center max-w-md w-full">
+					<h2 className="text-xl sm:text-2xl font-bold mb-4 text-foreground">
 						Oops! Something went wrong
 					</h2>
-					<p className="text-muted-foreground mb-6">{error}</p>
-					<Button onClick={() => window.location.reload()}>
+					<p className="text-sm sm:text-base text-muted-foreground mb-6">
+						{error}
+					</p>
+					<Button
+						onClick={() => window.location.reload()}
+						className="w-full sm:w-auto">
 						<Icon icon="solar:refresh-bold" className="w-4 h-4 mr-2" />
 						Try Again
 					</Button>
@@ -278,40 +282,44 @@ export default function HomePage() {
 			<Navbar />
 
 			{/* Featured Hero Section */}
-			<section className="relative h-[85vh] overflow-hidden">
+			<section className="relative h-[60vh] sm:h-[70vh] md:h-[80vh] lg:h-[85vh] overflow-hidden">
 				<div
 					className="absolute inset-0 bg-cover bg-center bg-no-repeat"
 					style={{ backgroundImage: `url(${featuredMovie.backdrop})` }}>
-					<div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-transparent" />
+					<div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/80 sm:via-background/70 to-transparent" />
 					<div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/60" />
 				</div>
 
 				<div className="relative h-full flex items-center">
-					<div className="container mx-auto px-6">
-						<div className="max-w-3xl">
+					<div className="container mx-auto px-4 sm:px-6">
+						<div className="max-w-full sm:max-w-2xl md:max-w-3xl">
 							{/* Title */}
-							<h1 className="text-3xl md:text-7xl font-bold mb-8 leading-tight text-primary">
+							<h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 md:mb-8 leading-tight text-primary">
 								{featuredMovie.title}
 							</h1>
 
 							{/* Metadata */}
-							<div className="flex items-center gap-6 mb-8 text-foreground/90">
+							<div className="flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6 mb-4 sm:mb-6 md:mb-8 text-foreground/90">
 								{featuredMovie.rating > 0 && (
-									<div className="flex items-center gap-2 backdrop-blur-sm px-3 py-1 rounded-full bg-foreground/10">
+									<div className="flex items-center gap-1 sm:gap-2 backdrop-blur-sm px-2 sm:px-3 py-1 rounded-full bg-foreground/10">
 										<Icon
 											icon="solar:star-bold-duotone"
-											className="w-5 h-5 text-yellow-400"
+											className="w-3 h-3 sm:w-4 md:w-5 md:h-5 text-yellow-400"
 										/>
-										<span className="font-semibold">
+										<span className="font-semibold text-xs sm:text-sm md:text-base">
 											{featuredMovie.rating}
 										</span>
 									</div>
 								)}
-								<span className="text-lg">{featuredMovie.year}</span>
-								<span className="text-lg">{featuredMovie.duration}</span>
+								<span className="text-sm sm:text-base md:text-lg">
+									{featuredMovie.year}
+								</span>
+								<span className="text-sm sm:text-base md:text-lg">
+									{featuredMovie.duration}
+								</span>
 								<Badge
 									variant="outline"
-									className="border-primary/50 text-primary bg-primary/10 hover:bg-primary/20">
+									className="border-primary/50 text-primary bg-primary/10 hover:bg-primary/20 text-xs sm:text-sm">
 									{
 										featuredMovie.resolutions[
 											featuredMovie.resolutions.length - 1
@@ -319,48 +327,46 @@ export default function HomePage() {
 									}
 								</Badge>
 								{featuredMovie.content_rating && (
-									<Badge variant="secondary">
+									<Badge variant="secondary" className="text-xs sm:text-sm">
 										{featuredMovie.content_rating}
 									</Badge>
 								)}
 							</div>
 
 							{/* Description */}
-							<p className="text-xl mb-10 leading-relaxed max-w-2xl font-light text-foreground/80">
+							<p className="text-sm sm:text-base md:text-lg lg:text-xl mb-6 sm:mb-8 md:mb-10 leading-relaxed max-w-full sm:max-w-xl md:max-w-2xl font-light text-foreground/80 line-clamp-3 sm:line-clamp-none">
 								{featuredMovie.description}
 							</p>
 
 							{/* Action Buttons */}
-							<div className="flex flex-col sm:flex-row gap-4">
+							<div className="flex  xs:flex-row gap-3 sm:gap-4">
 								<Button
-									size="lg"
-									className="bg-primary hover:bg-primary/90 text-primary-foreground px-10 py-6 text-lg font-semibold shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-primary/25"
+									variant={"default"}
 									onClick={() =>
-										router.push(`/video/play/${featuredMovie.id}`)
+										router.push(`/video/watch/${featuredMovie.id}`)
 									}>
-									<Icon icon="solar:play-bold" className="w-7 h-7 mr-3" />
+									<Icon
+										icon="solar:play-bold"
+										className="w-4 h-4 sm:w-5 md:w-6 lg:w-7  md:h-6 lg:h-7 mr-2 sm:mr-3"
+									/>
 									Play Now
 								</Button>
 								<Button
 									variant="outline"
-									size="lg"
-									className="backdrop-blur-sm px-10 py-6 text-lg border-border text-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-300"
 									onClick={() => router.push(`/video/${featuredMovie.slug}`)}>
 									<Icon
 										icon="solar:info-circle-bold-duotone"
-										className="w-7 h-7 mr-3"
+										className="w-4 h-4 sm:w-5 md:w-6 lg:w-7 md:h-6 lg:h-7 mr-2 sm:mr-3"
 									/>
 									More Info
 								</Button>
-								<Button
-									variant="ghost"
-									size="lg"
-									className="px-6 py-6 text-lg text-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-300">
+								<Button variant="ghost">
 									<Icon
 										icon="solar:bookmark-circle-bold-duotone"
-										className="w-7 h-7 mr-3"
+										className="w-4 h-4 sm:w-5 md:w-6 lg:w-7 md:h-6 lg:h-7 mr-2 sm:mr-3"
 									/>
-									Add to List
+									<span className="hidden sm:inline">Add to List</span>
+									<span className="sm:hidden">Add</span>
 								</Button>
 							</div>
 						</div>
@@ -368,7 +374,7 @@ export default function HomePage() {
 				</div>
 
 				{/* Bottom fade gradient */}
-				<div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent"></div>
+				<div className="absolute bottom-0 left-0 right-0 h-16 sm:h-24 md:h-32 bg-gradient-to-t from-background to-transparent"></div>
 			</section>
 
 			{/* Continue Watching Section */}
@@ -378,22 +384,25 @@ export default function HomePage() {
 				onMovieClick={handleContinueWatchingClick}
 				onRemove={handleRemoveFromContinueWatching}
 				type="continue-watching"
-				className={`relative ${
-					continueWatching.length > 0 ? "-mt-16 z-10" : ""
+				className={`relative px-4 sm:px-6 ${
+					continueWatching.length > 0 ? "-mt-8 sm:-mt-12 md:-mt-16 z-10" : ""
 				}`}
 			/>
 
 			{/* Movie Rows */}
 			<section
-				className={`relative ${
-					continueWatching && continueWatching.length > 0 ? "pt-0" : "-mt-24"
-				} z-10 pb-20`}>
+				className={`relative px-4 sm:px-6 ${
+					continueWatching && continueWatching.length > 0
+						? "pt-0"
+						: "-mt-12 sm:-mt-16 md:-mt-20 lg:-mt-24"
+				} z-10 pb-10 sm:pb-16 md:pb-20`}>
 				{/* Recommended for You */}
 				<MovieRow
 					title="Recommended for You"
 					movies={recommended}
 					onMovieClick={handleMovieClick}
 					type="poster"
+					className="mb-6 sm:mb-8 md:mb-10"
 				/>
 
 				{/* Trending Now */}
@@ -402,6 +411,7 @@ export default function HomePage() {
 					movies={trendingMovies}
 					onMovieClick={handleMovieClick}
 					type="poster"
+					className="mb-6 sm:mb-8 md:mb-10"
 				/>
 
 				{/* Popular on Seenema */}
@@ -410,6 +420,7 @@ export default function HomePage() {
 					movies={popularMovies}
 					onMovieClick={handleMovieClick}
 					type="poster"
+					className="mb-6 sm:mb-8 md:mb-10"
 				/>
 
 				{/* New Releases */}
@@ -418,6 +429,7 @@ export default function HomePage() {
 					movies={newReleases}
 					onMovieClick={handleMovieClick}
 					type="poster"
+					className="mb-6 sm:mb-8 md:mb-10"
 				/>
 
 				{/* Action & Adventure */}
@@ -426,6 +438,7 @@ export default function HomePage() {
 					movies={actionMovies}
 					onMovieClick={handleMovieClick}
 					type="poster"
+					className="mb-6 sm:mb-8 md:mb-10"
 				/>
 			</section>
 		</div>

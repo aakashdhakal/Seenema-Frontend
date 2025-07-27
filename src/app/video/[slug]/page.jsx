@@ -292,7 +292,7 @@ export default function VideoDetailsPage() {
 									<Button
 										size="lg"
 										className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 text-lg font-semibold shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-primary/25"
-										onClick={() => router.push(`/video/play/${videoData.id}`)}>
+										onClick={() => router.push(`/video/watch/${videoData.id}`)}>
 										<Icon icon="solar:play-bold" className="w-6 h-6 mr-2" />
 										Watch Now
 									</Button>

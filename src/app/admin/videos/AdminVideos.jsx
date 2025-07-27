@@ -144,7 +144,7 @@ export default function AdminVideos() {
 					action: {
 						label: "View Video",
 						onClick: () =>
-							window.open(`/video/play/${data.video_id}`, "_blank"),
+							window.open(`/video/watch/${data.video_id}`, "_blank"),
 					},
 				});
 				break;
@@ -296,7 +296,7 @@ export default function AdminVideos() {
 	const handleVideoAction = (action, video) => {
 		switch (action) {
 			case "Watch Video":
-				window.open(`/video/play/${video.id}`, "_blank");
+				window.open(`/video/watch/${video.id}`, "_blank");
 				break;
 			case "Edit Video":
 				window.location.href = `/admin/videos/edit/${video.id}`;
@@ -643,7 +643,10 @@ export default function AdminVideos() {
 																e.target.src = "/placeholder-video.jpg";
 															}}
 															onClick={() =>
-																window.open(`/video/play/${video.id}`, "_blank")
+																window.open(
+																	`/video/watch/${video.id}`,
+																	"_blank",
+																)
 															}
 														/>
 														<div className="absolute bottom-0 right-0 bg-black/75 text-white text-xs px-1 rounded-tl">

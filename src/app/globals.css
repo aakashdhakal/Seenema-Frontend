@@ -439,6 +439,37 @@ input[type=number] {
   appearance: textfield;
 }
 
+.seek-slider [role="slider"] {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+}
+
+.seek-slider [data-radix-collection-item] {
+  display: none !important;
+}
+
+/* Hide all thumb elements */
+.seek-slider .thumb,
+.seek-slider [class*="thumb"],
+.seek-slider [class*="Thumb"] {
+  display: none !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Ensure the track is clickable */
+.seek-slider [data-radix-slider-track] {
+  cursor: pointer;
+}
+
+/* Volume slider thumb removal */
+.volume-slider [role="slider"] {
+  display: none !important;
+}
+
 /* Dark mode toggle support */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {

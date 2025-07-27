@@ -266,6 +266,21 @@ export default function VideoPage() {
 		resetControlsTimeout();
 	};
 
+	// Custom seekbar click handler
+	const handleSeekbarClick = (e) => {
+		const video = videoRef.current;
+		if (!video || !duration) return;
+
+		const rect = e.currentTarget.getBoundingClientRect();
+		const clickX = e.clientX - rect.left;
+		const percentage = clickX / rect.width;
+		const newTime = percentage * duration;
+
+		video.currentTime = Math.max(0, Math.min(duration, newTime));
+		setCurrentTime(newTime);
+		resetControlsTimeout();
+	};
+
 	const toggleFullscreen = () => {
 		if (!document.fullscreenElement) {
 			document.documentElement
@@ -316,12 +331,13 @@ export default function VideoPage() {
 			className="fixed inset-0 w-screen h-screen bg-black"
 			onMouseMove={resetControlsTimeout}
 			onMouseLeave={() => isPlaying && setShowControls(false)}>
+			{/* Video Element */}
 			<video
 				ref={videoRef}
 				id="video"
 				muted
 				autoPlay
-				className="w-full h-full object-cover"
+				className="w-full h-full md:object-cover sm:object-contain"
 				onTimeUpdate={() => {
 					const video = videoRef.current;
 					if (video && !isLoading) {
@@ -362,6 +378,7 @@ export default function VideoPage() {
 				poster={videoData.backdrop_path || ""}
 			/>
 
+			{/* Loading State */}
 			{isLoading && (
 				<div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
 					<div className="animate-pulse">
@@ -370,88 +387,104 @@ export default function VideoPage() {
 							alt="Loading"
 							width={100}
 							height={100}
-							className="w-24 h-24 object-contain opacity-80"
+							className="w-12 h-12 xs:w-16 xs:h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain opacity-80"
 						/>
 					</div>
 				</div>
 			)}
 
+			{/* Play/Pause Center Button */}
 			<div
 				className="absolute inset-0 flex items-center justify-center cursor-pointer"
 				onClick={togglePlayPause}>
 				{!isPlaying && !isLoading && (
-					<div className="bg-black/50 rounded-full p-4 transition-opacity duration-300">
-						<Icon icon="solar:play-bold" className="w-16 h-16 text-primary" />
+					<div className="bg-black/60 rounded-full p-2 xs:p-3 sm:p-4 md:p-6 transition-all duration-300 hover:bg-black/80">
+						<Icon
+							icon="solar:play-bold"
+							className="w-8 h-8 xs:w-10 xs:h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 text-primary"
+						/>
 					</div>
 				)}
 			</div>
 
+			{/* Video Controls */}
 			<div
-				className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent transition-opacity duration-300 ${
-					showControls ? "opacity-100" : "opacity-0 pointer-events-none"
+				className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent transition-all duration-300 ${
+					showControls
+						? "opacity-100 translate-y-0"
+						: "opacity-0 translate-y-2 pointer-events-none"
 				}`}>
-				<div className="px-4 pb-2">
-					<div className="relative group">
-						<div className="absolute top-1/2 transform -translate-y-1/2 w-full h-1 bg-white/20 rounded-full z-10">
+				{/* Custom Seekbar */}
+				<div className="px-2 xs:px-3 sm:px-4 pb-1 xs:pb-2">
+					<div
+						className="relative w-full h-6 xs:h-8 sm:h-10 flex items-center cursor-pointer group"
+						onClick={handleSeekbarClick}>
+						{/* Background Track */}
+						<div className="absolute w-full h-1 xs:h-1.5 sm:h-2 bg-white/30 rounded-full">
+							{/* Buffer Progress */}
 							<div
 								className="h-full bg-white/50 rounded-full transition-all duration-300"
 								style={{
 									width: `${Math.min(bufferInfo.bufferedPercentage, 100)}%`,
 								}}
 							/>
+							{/* Play Progress */}
 							<div
 								className="h-full bg-primary rounded-full absolute top-0 left-0 transition-all duration-100"
 								style={{ width: `${Math.min(progressPercentage, 100)}%` }}
 							/>
 						</div>
-						<Slider
-							value={[currentTime]}
-							max={duration || 100}
-							step={0.1}
-							onValueChange={handleSeek}
-							className="w-full cursor-pointer relative z-20 custom-transparent-range custom-slider-thumb"
-						/>
+
+						{/* Invisible clickable area for better touch targets */}
+						<div className="absolute inset-0 z-10" />
 					</div>
 				</div>
 
-				<div className="flex items-center justify-between px-4 pb-4">
-					<div className="flex items-center space-x-3">
+				{/* Control Buttons */}
+				<div className="flex items-center justify-between px-2 xs:px-3 sm:px-4 pb-2 xs:pb-3 sm:pb-4 gap-1 xs:gap-2">
+					{/* Left Controls */}
+					<div className="flex items-center gap-1 xs:gap-2 sm:gap-3 flex-1 min-w-0">
 						<Button
 							variant="ghost"
 							size="sm"
 							onClick={togglePlayPause}
-							className="text-white hover:text-primary hover:bg-white/10">
+							className="text-white hover:text-primary hover:bg-white/20 p-1 xs:p-1.5 sm:p-2 shrink-0">
 							<Icon
 								icon={isPlaying ? "solar:pause-bold" : "solar:play-bold"}
-								className="w-6 h-6"
+								className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6"
 							/>
 						</Button>
+
+						{/* Skip buttons - Hidden on very small screens */}
 						<Button
 							variant="ghost"
 							size="sm"
 							onClick={() => skipTime(-10)}
-							className="text-white hover:text-primary hover:bg-white/10">
+							className="text-white hover:text-primary hover:bg-white/20 p-1 xs:p-1.5 sm:p-2 shrink-0 hidden xs:flex">
 							<Icon
 								icon="solar:rewind-10-seconds-back-bold"
-								className="w-5 h-5"
+								className="w-4 h-4 sm:w-5 sm:h-5"
 							/>
 						</Button>
+
 						<Button
 							variant="ghost"
 							size="sm"
 							onClick={() => skipTime(10)}
-							className="text-white hover:text-primary hover:bg-white/10">
+							className="text-white hover:text-primary hover:bg-white/20 p-1 xs:p-1.5 sm:p-2 shrink-0 hidden xs:flex">
 							<Icon
 								icon="solar:rewind-10-seconds-forward-bold"
-								className="w-5 h-5"
+								className="w-4 h-4 sm:w-5 sm:h-5"
 							/>
 						</Button>
-						<div className="flex items-center space-x-2">
+
+						{/* Volume Controls */}
+						<div className="flex items-center gap-1 xs:gap-2 shrink-0">
 							<Button
 								variant="ghost"
 								size="sm"
 								onClick={toggleMute}
-								className="text-white hover:text-primary hover:bg-white/10">
+								className="text-white hover:text-primary hover:bg-white/20 p-1 xs:p-1.5 sm:p-2">
 								<Icon
 									icon={
 										isMuted || volume === 0
@@ -460,69 +493,89 @@ export default function VideoPage() {
 											? "solar:volume-small-bold"
 											: "solar:volume-loud-bold"
 									}
-									className="w-5 h-5"
+									className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6"
 								/>
 							</Button>
-							<div className="w-20">
+
+							{/* Volume Slider - Hidden on mobile */}
+							<div className="w-12 sm:w-16 md:w-20 hidden sm:block">
 								<Slider
 									value={[isMuted ? 0 : volume]}
 									max={100}
 									step={1}
 									onValueChange={handleVolumeChange}
-									className="cursor-pointer"
+									className="cursor-pointer [&_[role=slider]]:hidden [&_[role=slider]]:w-0 [&_[role=slider]]:h-0"
 								/>
 							</div>
 						</div>
-						<div className="text-white text-sm">
-							{formatDuration(currentTime)} / {formatDuration(duration || 0)}
+
+						{/* Time Display */}
+						<div className="text-white text-xs xs:text-sm sm:text-base whitespace-nowrap min-w-0 overflow-hidden">
+							<span className="hidden sm:inline">
+								{formatDuration(currentTime)} / {formatDuration(duration || 0)}
+							</span>
+							<span className="sm:hidden">{formatTime(currentTime)}</span>
 						</div>
 					</div>
 
-					<div className="flex items-center space-x-3">
-						<CustomDropdown
-							options={[0.5, 1, 1.5, 2]}
-							selectedOption={playbackRate + "X"}
-							onSelect={handlePlaybackRateChange}
-						/>
-						<CustomDropdown
-							options={["Auto", ...resolutionList]}
-							selectedOption={resolution}
-							onSelect={(res) => {
-								if (res !== resolution) setResolution(res);
-							}}
-						/>
+					{/* Right Controls */}
+					<div className="flex items-center gap-1 xs:gap-2 sm:gap-3 shrink-0">
+						{/* Playback Rate - Hidden on small screens */}
+						<div className="hidden lg:block">
+							<CustomDropdown
+								options={[0.5, 1, 1.5, 2]}
+								selectedOption={playbackRate + "X"}
+								onSelect={handlePlaybackRateChange}
+							/>
+						</div>
+
+						{/* Resolution - Hidden on very small screens */}
+						<div className="hidden md:block">
+							<CustomDropdown
+								options={["Auto", ...resolutionList]}
+								selectedOption={resolution}
+								onSelect={(res) => {
+									if (res !== resolution) setResolution(res);
+								}}
+							/>
+						</div>
+
+						{/* Picture in Picture - Hidden on mobile */}
 						<Button
 							variant="ghost"
 							size="sm"
 							onClick={() => videoRef.current?.requestPictureInPicture?.()}
-							className="text-white hover:text-primary hover:bg-white/10">
-							<Icon icon="solar:pip-bold" className="w-5 h-5" />
+							className="text-white hover:text-primary hover:bg-white/20 p-1 xs:p-1.5 sm:p-2 hidden sm:flex">
+							<Icon icon="solar:pip-bold" className="w-4 h-4 sm:w-5 sm:h-5" />
 						</Button>
+
+						{/* Fullscreen */}
 						<Button
 							variant="ghost"
 							size="sm"
 							onClick={toggleFullscreen}
-							className="text-white hover:text-primary hover:bg-white/10">
+							className="text-white hover:text-primary hover:bg-white/20 p-1 xs:p-1.5 sm:p-2">
 							<Icon
 								icon={
 									isFullscreen
 										? "solar:quit-full-screen-bold"
 										: "solar:full-screen-bold"
 								}
-								className="w-5 h-5"
+								className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6"
 							/>
 						</Button>
 					</div>
 				</div>
 			</div>
 
+			{/* Video Title */}
 			{videoData.title && showControls && (
-				<div className="absolute top-4 left-4 right-4 w-max pointer-events-none">
-					<div className="bg-black/30 rounded-lg p-2 backdrop-blur-sm">
-						<h1 className="text-white text-xl font-bold mb-0">
+				<div className="absolute top-2 xs:top-3 sm:top-4 left-2 xs:left-3 sm:left-4 right-2 xs:right-3 sm:right-4 pointer-events-none z-10">
+					<div className="bg-black/40 backdrop-blur-sm rounded-lg p-2 xs:p-3 sm:p-4 max-w-max overflow-hidden">
+						<h1 className="text-white text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl font-bold truncate">
 							{videoData.title}
 							{videoData.release_year && (
-								<span className="text-white/70 text-lg font-normal ml-2">
+								<span className="text-white/80 text-xs xs:text-sm sm:text-base md:text-lg font-normal ml-1 sm:ml-2">
 									({videoData.release_year})
 								</span>
 							)}
@@ -530,6 +583,23 @@ export default function VideoPage() {
 					</div>
 				</div>
 			)}
+
+			{/* Mobile Touch Zones for Skip */}
+			<div className="block sm:hidden">
+				{/* Left skip zone */}
+				<div
+					className="absolute left-0 top-0 w-1/3 h-full flex items-center justify-start pl-4"
+					onDoubleClick={() => skipTime(-10)}>
+					{/* Visual feedback could go here */}
+				</div>
+
+				{/* Right skip zone */}
+				<div
+					className="absolute right-0 top-0 w-1/3 h-full flex items-center justify-end pr-4"
+					onDoubleClick={() => skipTime(10)}>
+					{/* Visual feedback could go here */}
+				</div>
+			</div>
 		</div>
 	);
 }

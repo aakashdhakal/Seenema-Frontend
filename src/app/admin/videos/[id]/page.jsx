@@ -500,7 +500,7 @@ export default function VideoDetails() {
 								<Button
 									variant="outline"
 									onClick={() =>
-										window.open(`/video/play/${video.id}`, "_blank")
+										window.open(`/video/watch/${video.id}`, "_blank")
 									}>
 									<Icon icon="solar:play-bold" className="mr-2 h-4 w-4" />
 									Preview
@@ -1048,7 +1048,7 @@ export default function VideoDetails() {
 									alt={video.title}
 									className="w-full h-full object-cover rounded-b-lg cursor-pointer"
 									onClick={() =>
-										window.open(`/video/play/${video.id}`, "_blank")
+										window.open(`/video/watch/${video.id}`, "_blank")
 									}
 									onError={(e) => {
 										e.target.src = "/placeholder-video.jpg";
@@ -1059,7 +1059,7 @@ export default function VideoDetails() {
 										size="lg"
 										className="bg-white/20 backdrop-blur-sm hover:bg-white/30"
 										onClick={() =>
-											window.open(`/video/play/${video.id}`, "_blank")
+											window.open(`/video/watch/${video.id}`, "_blank")
 										}>
 										<Icon icon="solar:play-bold" className="h-8 w-8" />
 									</Button>
