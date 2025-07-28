@@ -255,9 +255,7 @@ export default function VideoUploadPage() {
 			if (newPersonForm.profileImage) {
 				personData.append("profile_picture", newPersonForm.profileImage);
 			}
-			const response = await axios.post("/addPerson", personData, {
-				headers: { "Content-Type": "multipart/form-data" },
-			});
+			const response = await axios.post("/addPerson", personData);
 			const newPerson = response.data;
 			setPeople((prev) => [...prev, newPerson]);
 			setCreditInput((prev) => ({
@@ -318,9 +316,6 @@ export default function VideoUploadPage() {
 			const createResponse = await axios.post(
 				"/createVideoEntry",
 				metadataForm,
-				{
-					headers: { "Content-Type": "multipart/form-data" },
-				},
 			);
 			const { video_id } = createResponse.data;
 
