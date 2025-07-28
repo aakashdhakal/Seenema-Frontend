@@ -299,7 +299,7 @@ export default function AdminVideos() {
 				window.open(`/video/watch/${video.id}`, "_blank");
 				break;
 			case "Edit Video":
-				window.location.href = `/admin/videos/edit/${video.id}`;
+				window.location.href = `/admin/videos/${video.id}`;
 				break;
 			case "View Uploader":
 				window.open(`/admin/users/${video.user?.id}`, "_blank");
