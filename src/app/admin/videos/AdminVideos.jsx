@@ -53,58 +53,35 @@ export default function AdminVideos() {
 
 	// Setup Laravel Reverb notifications
 	useEffect(() => {
-		setMounted(true);
-
-		// Only setup notifications if user is authenticated
 		if (!user?.user?.id) return;
 
-		console.log("Setting up Reverb notifications for user:", user.user.id);
-
-		// Listen for connection events
-		if (echo.connector?.pusher?.connection) {
-			echo.connector.pusher.connection.bind("connected", () => {
-				console.log("Reverb connected successfully");
-				setConnectionStatus("connected");
-			});
-
-			echo.connector.pusher.connection.bind("disconnected", () => {
-				console.log("Reverb disconnected");
-				setConnectionStatus("disconnected");
-			});
-
-			echo.connector.pusher.connection.bind("error", (error) => {
-				console.error("Reverb connection error:", error);
-				setConnectionStatus("error");
-			});
+		const conn = echo.connector?.pusher?.connection;
+		if (conn) {
+			conn.bind("connected", () => setConnectionStatus("connected"));
+			conn.bind("disconnected", () => setConnectionStatus("disconnected"));
+			conn.bind("error", () => setConnectionStatus("error"));
 		}
 
-		// Listen for admin notifications
 		const adminChannel = echo
 			.private("admin.notifications")
-			.listen(".video.processing.status", (data) => {
-				console.log("Received video processing status update:", data);
-				handleVideoStatusUpdate(data);
-			})
-			.error((error) => {
-				console.error("Admin channel error:", error);
+			.listen(".video.processing.status", handleVideoStatusUpdate);
+
+		const testChannel = echo
+			.channel("test-channel")
+			.listen(".hello.world", (data) => {
+				console.log("Received:", data.message);
 			});
 
-		// Cleanup function
 		return () => {
-			if (adminChannel) {
-				adminChannel.stopListening(".video.processing.status");
-			}
+			adminChannel.stopListening(".video.processing.status");
 			echo.leaveChannel("admin.notifications");
-			if (user.user.role === "admin") {
-				echo.leaveChannel(`user.${user.user.id}`);
-			}
+			testChannel.stopListening(".test.event");
+			echo.leaveChannel("test-channel");
 		};
 	}, [user?.user?.id]);
 
 	// Handle video status updates in real-time
 	const handleVideoStatusUpdate = (data) => {
-		console.log("Processing video status update:", data);
-
 		// Update the video in the videos array
 		setVideos((prevVideos) => {
 			return prevVideos.map((video) => {
@@ -119,9 +96,6 @@ export default function AdminVideos() {
 						updatedVideo.resolutions = data.resolutions;
 					}
 
-					console.log(
-						`Updated video ${video.id} status from ${video.status} to ${data.status}`,
-					);
 					return updatedVideo;
 				}
 				return video;

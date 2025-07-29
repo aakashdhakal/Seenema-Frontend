@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 
 export default function CustomAlertDialog(props) {
-	console.log("CustomAlertDialog props:", props);
 	return (
 		<AlertDialog open={props.open} onOpenChange={props.onOpenChange}>
 			<AlertDialogTrigger asChild>
