@@ -65,6 +65,7 @@ export default function AdminVideos() {
 		const adminChannel = echo
 			.private("admin.notifications")
 			.listen(".video.processing.status", handleVideoStatusUpdate);
+		console.log("Subscribed to admin.notifications channel", adminChannel);
 
 		const testChannel = echo
 			.channel("test-channel")
