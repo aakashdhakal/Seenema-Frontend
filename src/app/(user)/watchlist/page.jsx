@@ -30,6 +30,9 @@ export default function WatchlistPage() {
 		}
 		return `${minutes}m`;
 	};
+	const handleRemoveFromWatchlist = (videoId) => {
+		setWatchlistMovies((prev) => prev.filter((movie) => movie.id !== videoId));
+	};
 
 	// Set userData when user is available
 	useEffect(() => {
@@ -134,18 +137,11 @@ export default function WatchlistPage() {
 			<section className="pt-24 sm:pt-28 md:pt-32 pb-8 sm:pb-12 px-4 sm:px-6">
 				<div className="container mx-auto">
 					<div className="flex items-center gap-4 mb-2">
-						<Icon
-							icon="solar:bookmark-bold-duotone"
-							className="w-8 h-8 sm:w-10 sm:h-10 text-primary"
-						/>
-						<h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
+						<Icon icon="fluent:bookmark-16-filled" width="3em" height="3em" />
+						<h1 className="text-2xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">
 							My Watchlist
 						</h1>
 					</div>
-					<p className="text-sm sm:text-base text-muted-foreground ml-12 sm:ml-14">
-						{watchlistMovies.length}{" "}
-						{watchlistMovies.length === 1 ? "movie" : "movies"} saved for later
-					</p>
 				</div>
 			</section>
 
@@ -197,6 +193,7 @@ export default function WatchlistPage() {
 									key={movie.id}
 									video={movie}
 									onClick={() => router.push(`/video/${movie.slug}`)}
+									onRemoveFromWatchlist={handleRemoveFromWatchlist}
 								/>
 							))}
 						</div>

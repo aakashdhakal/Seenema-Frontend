@@ -6,18 +6,18 @@ import { Badge } from "@/components/ui/badge";
 import { Icon } from "@iconify/react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { addToWatchList, removeFromWatchList } from "@/lib/helper";
 import { toast } from "sonner";
 
-export default function PosterCard({ video, onClick }) {
-	console.log(video);
+export default function PosterCard({ video, onClick, onRemoveFromWatchlist }) {
 	const [isHovered, setIsHovered] = useState(false);
 	const [isImageLoading, setIsImageLoading] = useState(true);
 	const [isWatchlisted, setIsWatchlisted] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 	const { theme } = useTheme();
 	const router = useRouter();
+	const pathname = usePathname();
 
 	useEffect(() => {
 		// Check if video exists in watchlist
@@ -36,6 +36,10 @@ export default function PosterCard({ video, onClick }) {
 				await removeFromWatchList(video.id);
 				setIsWatchlisted(false);
 				toast.success("Removed from watchlist");
+				console.log("Removed from watchlist:", pathname);
+				if (onRemoveFromWatchlist) {
+					onRemoveFromWatchlist(video.id);
+				}
 			} else {
 				// Add to watchlist
 				await addToWatchList(video.id);
@@ -54,13 +58,11 @@ export default function PosterCard({ video, onClick }) {
 		e.preventDefault();
 		e.stopPropagation();
 		router.push(`/video/watch/${video.id}`);
-		console.log("Play button clicked for video:", video.title);
 	};
 
 	const handleInfo = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		console.log("Info button clicked for video:", video.title);
 		router.push(`/video/${video.slug}`);
 	};
 
