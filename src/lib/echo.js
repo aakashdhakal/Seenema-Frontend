@@ -25,6 +25,10 @@ const echo = new Echo({
 						channel_name: channel.name,
 					})
 					.then((response) => {
+						console.log(
+							"Broadcasting authorization successful:",
+							response.data,
+						);
 						callback(false, response.data);
 					})
 					.catch((error) => {
