@@ -9,7 +9,7 @@ const echo = new Echo({
 	key: process.env.NEXT_PUBLIC_REVERB_APP_KEY,
 	wsHost: process.env.NEXT_PUBLIC_REVERB_HOST,
 	wsPort: process.env.NEXT_PUBLIC_REVERB_PORT,
-	wssPort: process.env.NEXT_PUBLIC_REVERB_PORT,
+	wssPort: 443,
 	forceTLS: (process.env.NEXT_PUBLIC_REVERB_SCHEME ?? "http") === "https",
 	enabledTransports: ["ws", "wss"],
 
