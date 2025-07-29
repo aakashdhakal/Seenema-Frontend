@@ -1,6 +1,8 @@
 import Echo from "laravel-echo";
-import axiosInstance from "./axios";
+import Pusher from "pusher-js";
+import axiosInstance from "./axios"; // Import your configured Axios instance
 
+window.Pusher = Pusher;
 const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const echo = new Echo({
 	broadcaster: "reverb",
@@ -10,9 +12,13 @@ const echo = new Echo({
 	wssPort: process.env.NEXT_PUBLIC_REVERB_PORT,
 	forceTLS: (process.env.NEXT_PUBLIC_REVERB_SCHEME ?? "http") === "https",
 	enabledTransports: ["ws", "wss"],
+
+	// REMOVE the old 'auth' block and REPLACE it with a custom authorizer.
 	authorizer: (channel, options) => {
 		return {
 			authorize: (socketId, callback) => {
+				// Use your Sanctum-configured axios instance to make the auth request.
+				// The browser will handle the cookies automatically.
 				axiosInstance
 					.post(backendUrl + "/broadcasting/auth", {
 						socket_id: socketId,
