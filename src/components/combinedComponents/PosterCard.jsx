@@ -7,11 +7,7 @@ import { Icon } from "@iconify/react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-import {
-	addToWatchList,
-	removeFromWatchList,
-	checkIfVideoInWatchList,
-} from "@/lib/helper";
+import { addToWatchList, removeFromWatchList } from "@/lib/helper";
 import { toast } from "sonner";
 
 export default function PosterCard({ video, onClick }) {
@@ -23,32 +19,34 @@ export default function PosterCard({ video, onClick }) {
 	const { theme } = useTheme();
 	const router = useRouter();
 
+	useEffect(() => {
+		// Check if video exists in watchlist
+		if (video.exists_in_watchlist) {
+			setIsWatchlisted(true);
+		}
+	}, [video.exists_in_watchlist]);
+
 	const handleWatchlistToggle = async (e) => {
 		e.preventDefault();
 		e.stopPropagation();
 		setIsLoading(true);
-		const isVideoInWatchlist = await checkIfVideoInWatchList(video.id);
-		if (isVideoInWatchlist.exists) {
-			setIsWatchlisted(true);
-		}
-		if (isWatchlisted) {
-			const response = await removeFromWatchList(video.id);
-			if (response.success) {
+		try {
+			if (isWatchlisted) {
+				// Remove from watchlist
+				await removeFromWatchList(video.id);
 				setIsWatchlisted(false);
 				toast.success("Removed from watchlist");
 			} else {
-				toast.error("Failed to remove from watchlist");
-			}
-		} else {
-			const response = await addToWatchList(video.id);
-			console.log("Watchlist response:", response);
-			if (response.success) {
+				// Add to watchlist
+				await addToWatchList(video.id);
 				setIsWatchlisted(true);
 				toast.success("Added to watchlist");
-			} else {
-				toast.error("Failed to add to watchlist");
 			}
+		} catch (error) {
+			console.error("Error toggling watchlist:", error);
+			toast.error("Failed to update watchlist");
 		}
+
 		setIsLoading(false);
 	};
 
@@ -165,7 +163,15 @@ export default function PosterCard({ video, onClick }) {
 										height="2em"
 									/>
 								}>
-								<Icon icon={"solar:bookmark-linear"} className="w-4 h-4" />
+								{isWatchlisted === true ? (
+									<Icon icon="solar:bookmark-bold" className="w-4 h-4" />
+								) : (
+									<Icon
+										icon="hugeicons:bookmark-add-02"
+										width="4em"
+										height="4em"
+									/>
+								)}
 							</Button>
 						</div>
 					</div>

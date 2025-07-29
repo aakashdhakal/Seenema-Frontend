@@ -183,6 +183,17 @@ export default function Navbar() {
 										</div>
 									</DropdownMenuLabel>
 									<DropdownMenuSeparator />
+									{user.user.role === "admin" && (
+										<DropdownMenuItem asChild>
+											<Link href="/admin" className="cursor-pointer">
+												<Icon
+													icon="material-symbols:admin-panel-settings"
+													className="mr-2 h-4 w-4"
+												/>
+												<span>Admin Panel</span>
+											</Link>
+										</DropdownMenuItem>
+									)}
 									<DropdownMenuItem asChild>
 										<Link href="/profile" className="cursor-pointer">
 											<Icon

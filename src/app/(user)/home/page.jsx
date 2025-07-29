@@ -164,6 +164,7 @@ export default function HomePage() {
 					slug: featured.slug,
 					content_rating: featured.content_rating,
 					resolutions: featured.resolutions,
+					exists_in_watchlist: featured.exists_in_watchlist,
 				});
 
 				// API Call 2: Get trending content
@@ -178,6 +179,7 @@ export default function HomePage() {
 						year: video.release_year,
 						duration: formatDuration(video.duration),
 						resolutions: video.resolutions,
+						exists_in_watchlist: video.exists_in_watchlist,
 					})),
 				);
 
@@ -193,6 +195,7 @@ export default function HomePage() {
 						year: video.release_year,
 						duration: formatDuration(video.duration),
 						resolutions: video.resolutions,
+						exists_in_watchlist: video.exists_in_watchlist,
 					})),
 				);
 
@@ -208,6 +211,7 @@ export default function HomePage() {
 						year: video.release_year,
 						duration: formatDuration(video.duration),
 						resolutions: video.resolutions,
+						exists_in_watchlist: video.exists_in_watchlist,
 					})),
 				);
 
@@ -223,6 +227,7 @@ export default function HomePage() {
 						year: video.release_year,
 						duration: formatDuration(video.duration),
 						resolutions: video.resolutions,
+						exists_in_watchlist: video.exists_in_watchlist,
 					})),
 				);
 
@@ -270,6 +275,7 @@ export default function HomePage() {
 						year: video.release_year,
 						duration: formatDuration(video.duration),
 						resolutions: video.resolutions,
+						exists_in_watchlist: video.exists_in_watchlist,
 					})),
 				);
 			} catch (err) {
