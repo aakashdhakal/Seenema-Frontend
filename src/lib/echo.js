@@ -1,6 +1,6 @@
 import Echo from "laravel-echo";
 import Pusher from "pusher-js";
-import axiosInstance from "./axios"; // Import your configured Axios instance
+import axios from "./axios"; // Import your configured Axios instance
 
 window.Pusher = Pusher;
 const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -19,7 +19,7 @@ const echo = new Echo({
 			authorize: (socketId, callback) => {
 				// Use your Sanctum-configured axios instance to make the auth request.
 				// The browser will handle the cookies automatically.
-				axiosInstance
+				axios
 					.post(backendUrl + "/broadcasting/auth", {
 						socket_id: socketId,
 						channel_name: channel.name,
