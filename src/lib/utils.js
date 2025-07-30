@@ -8,7 +8,7 @@ export function cn(...inputs) {
 
 export async function getMainManifest(videoId) {
 	try {
-		const res = await axios.get(`/manifest/${videoId}`);
+		const res = await axios.get(`/stream/manifest/${videoId}`);
 		return res.data;
 	} catch (err) {
 		console.error("Error fetching main manifest:", err);
@@ -18,7 +18,7 @@ export async function getMainManifest(videoId) {
 
 export async function getManifestByResolution(videoId, resolution) {
 	try {
-		const res = await axios.get(`/manifest/${videoId}/${resolution}`);
+		const res = await axios.get(`/stream/manifest/${videoId}/${resolution}`);
 		return res.data;
 	} catch (err) {
 		console.error("Error fetching manifest by resolution:", err);
@@ -28,7 +28,7 @@ export async function getManifestByResolution(videoId, resolution) {
 
 export async function getManifestBySegment(videoId, segmentName) {
 	try {
-		const res = await axios.get(`/manifest/${videoId}/${segmentName}`);
+		const res = await axios.get(`/stream/manifest/${videoId}/${segmentName}`);
 		return res.data;
 	} catch (err) {
 		console.error("Error fetching manifest by segment:", err);
@@ -39,7 +39,7 @@ export async function getManifestBySegment(videoId, segmentName) {
 export async function getVideoSegment(videoId, resolution, segmentName) {
 	try {
 		const res = await axios.get(
-			`/segment/${videoId}/${resolution}/${segmentName}`,
+			`/stream/segment/${videoId}/${resolution}/${segmentName}`,
 			{ responseType: "arraybuffer" },
 		);
 		return res.data;
@@ -113,7 +113,7 @@ export function getAvailableResolutions(manifestText) {
 
 export async function getVideoData(videoId) {
 	try {
-		const res = await axios.get(`/getVideoById/${videoId}`);
+		const res = await axios.get(`/video/${videoId}`);
 		return res.data;
 	} catch (err) {
 		console.error("Error fetching video data:", err);
@@ -122,7 +122,7 @@ export async function getVideoData(videoId) {
 
 export async function getSegmentSizes(videoId, segment) {
 	try {
-		const res = await axios.get(`/getSegmentSizes/${videoId}/${segment}`);
+		const res = await axios.get(`/stream/segment-size/${videoId}/${segment}`);
 		return res.data;
 	} catch (err) {
 		console.error("Error fetching segment sizes:", err);
@@ -132,7 +132,7 @@ export async function getSegmentSizes(videoId, segment) {
 
 export async function getInitFile(videoId, resolution) {
 	try {
-		const res = await axios.get(`/init/${videoId}/${resolution}`, {
+		const res = await axios.get(`/stream/init/${videoId}/${resolution}`, {
 			responseType: "arraybuffer",
 		});
 		return res.data;
@@ -144,7 +144,7 @@ export async function getInitFile(videoId, resolution) {
 
 export async function getIntroVideo(resolution) {
 	try {
-		const res = await axios.get(`/getIntroVideo/${resolution}`, {
+		const res = await axios.get(`/stream/intro/${resolution}`, {
 			responseType: "arraybuffer",
 		});
 		return res.data;
@@ -156,7 +156,7 @@ export async function getIntroVideo(resolution) {
 
 export async function getIntroInit(resolution) {
 	try {
-		const res = await axios.get(`/getIntroInit/${resolution}`, {
+		const res = await axios.get(`/stream/intro/init/${resolution}`, {
 			responseType: "arraybuffer",
 		});
 		return res.data;
@@ -168,7 +168,7 @@ export async function getIntroInit(resolution) {
 
 export async function getIntroManifest(resolution) {
 	try {
-		const res = await axios.get(`/getIntroManifest/${resolution}`);
+		const res = await axios.get(`/stream/intro/manifest/${resolution}`);
 		return res.data;
 	} catch (err) {
 		console.error("Error fetching intro manifest:", err);
@@ -178,7 +178,7 @@ export async function getIntroManifest(resolution) {
 
 export async function updateWatchHistory(videoId, currentDuration) {
 	try {
-		const res = await axios.post(`/updateWatchHistory`, {
+		const res = await axios.post(`/history/update`, {
 			videoId,
 			currentTime: currentDuration,
 		});
@@ -217,7 +217,7 @@ export function calculateMinSegmentSize(sizes) {
 
 export async function deleteVideo(videoId) {
 	try {
-		const res = await axios.delete(`/deleteVideo/${videoId}`);
+		const res = await axios.delete(`/video/${videoId}`);
 		return res.data;
 	} catch (err) {
 		console.error("Error deleting video:", err);

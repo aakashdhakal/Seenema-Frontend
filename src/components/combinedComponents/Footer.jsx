@@ -13,7 +13,7 @@ export default function Footer() {
 			{ name: "Home", href: "/home" },
 			{ name: "Movies", href: "/movies" },
 			{ name: "Genres", href: "/genres" },
-			{ name: "Popular", href: "/popular" },
+			{ name: "Popular", href: "/video/popular" },
 		],
 		support: [
 			{ name: "Help Center", href: "/" },

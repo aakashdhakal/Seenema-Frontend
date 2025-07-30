@@ -38,9 +38,9 @@ export default function WatchlistPage() {
 	useEffect(() => {
 		if (user) {
 			setUserData({
-				name: user.user?.name || "User",
-				email: user.user?.email || "",
-				avatar: user.user?.avatar || null,
+				name: user?.name || "User",
+				email: user?.email || "",
+				avatar: user?.avatar || null,
 			});
 		}
 	}, [user]);
@@ -52,7 +52,7 @@ export default function WatchlistPage() {
 
 	// Redirect to login if not authenticated
 	useEffect(() => {
-		if (user && !user.user.email_verified_at) {
+		if (user && !user.is_email_verified) {
 			router.replace("/verifyEmail");
 			return;
 		}
@@ -71,7 +71,7 @@ export default function WatchlistPage() {
 				setLoading(true);
 				setError(null);
 
-				const watchlistResponse = await axios.get("/getWatchlist");
+				const watchlistResponse = await axios.get("/watchlist");
 				setWatchlistMovies(
 					watchlistResponse.data.map((item) => ({
 						id: item.video.id,

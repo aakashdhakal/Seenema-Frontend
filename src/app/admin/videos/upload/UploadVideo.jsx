@@ -112,8 +112,8 @@ export default function VideoUploadPage() {
 		const fetchData = async () => {
 			try {
 				const [peopleRes, genresRes] = await Promise.all([
-					axios.get("/getPeople"),
-					axios.get("/getGenres"),
+					axios.get("/people/get"),
+					axios.get("/genre/get"),
 				]);
 				setPeople(peopleRes.data);
 				setAvailableGenres(genresRes.data.map((g) => g.name));
@@ -255,7 +255,7 @@ export default function VideoUploadPage() {
 			if (newPersonForm.profileImage) {
 				personData.append("profile_picture", newPersonForm.profileImage);
 			}
-			const response = await axios.post("/addPerson", personData);
+			const response = await axios.post("/people/create", personData);
 			const newPerson = response.data;
 			setPeople((prev) => [...prev, newPerson]);
 			setCreditInput((prev) => ({
@@ -313,10 +313,7 @@ export default function VideoUploadPage() {
 			metadataForm.append("visibility", formData.visibility);
 			metadataForm.append("language", formData.language);
 
-			const createResponse = await axios.post(
-				"/createVideoEntry",
-				metadataForm,
-			);
+			const createResponse = await axios.post("/video/create", metadataForm);
 			const { video_id } = createResponse.data;
 
 			// --- Step 3: Upload file in chunks ---
@@ -332,23 +329,23 @@ export default function VideoUploadPage() {
 				chunkForm.append("chunk", chunk, uploadedFile.name);
 				chunkForm.append("is_last", i === totalChunks - 1);
 
-				await axios.post("/uploadVideoChunk", chunkForm);
+				await axios.post("/video/chunk/upload", chunkForm);
 				setUploadProgress(Math.round((end / uploadedFile.size) * 100));
 			}
 
 			// --- Step 4: Add related data (genres, tags, credits) ---
 			if (formData.genres.length > 0)
-				await axios.post("/addGenreToVideo", {
+				await axios.post("/genre/add", {
 					videoId: video_id,
 					genres: formData.genres,
 				});
 			if (formData.tags.length > 0)
-				await axios.post("/addTagsToVideo", {
+				await axios.post("/tags/add", {
 					videoId: video_id,
 					tags: formData.tags,
 				});
 			if (formData.credits.length > 0)
-				await axios.post("/addCreditsToVideo", {
+				await axios.post("/people/add-credit", {
 					videoId: video_id,
 					credits: formData.credits,
 				});

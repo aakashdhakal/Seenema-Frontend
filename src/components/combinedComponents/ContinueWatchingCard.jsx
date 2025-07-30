@@ -2,61 +2,57 @@
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@iconify/react";
 import Image from "next/image";
+import { removeFromContinueWatching } from "@/lib/helper";
+import { toast } from "sonner";
 
-const ContinueWatchingCard = ({
-	video,
-	onClick,
-	onRemove,
-	className = "",
-	...props
-}) => {
+const ContinueWatchingCard = ({ video, onClick, onRemoveFromHistory }) => {
 	const [isHovered, setIsHovered] = useState(false);
 	const [imageLoaded, setImageLoaded] = useState(false);
+	const [removeLoading, setRemoveLoading] = useState(false);
 
-	// Format last watched date
-	const formatLastWatched = (dateString) => {
-		if (!dateString) return "Recently";
-		const date = new Date(dateString);
-		const now = new Date();
-		const diffInHours = (now - date) / (1000 * 60 * 60);
-
-		if (diffInHours < 1) {
-			return "Just now";
-		} else if (diffInHours < 24) {
-			const hours = Math.floor(diffInHours);
-			return `${hours}h ago`;
-		} else if (diffInHours < 48) {
-			return "Yesterday";
-		} else {
-			const days = Math.floor(diffInHours / 24);
-			return `${days}d ago`;
+	// Handle remove click
+	const handleRemove = async (e) => {
+		e.stopPropagation(); // Prevent triggering the card onClick
+		setRemoveLoading(true);
+		try {
+			const res = await removeFromContinueWatching(video.id);
+			if (res.status === 200) {
+				toast.success("Removed from continue watching");
+				if (onRemoveFromHistory) {
+					onRemoveFromHistory(video.id);
+				}
+				// Optionally, you can show a success message or toast here
+			} else {
+				console.error("Failed to remove from watchlist:", res.message);
+			}
+		} catch {
+			console.error("Failed to remove from watchlist");
 		}
+		setRemoveLoading(false);
 	};
 
-	console.log("ContinueWatchingCard video:", video);
-
 	return (
-		<div
-			className={`group cursor-pointer w-80 flex flex-col gap-4 m-0 p-0 h-full ${className}`}
-			{...props}>
+		<div className={`group cursor-pointer w-80 flex-shrink-0`}>
 			<Card
-				className="bg-transparent border-none shadow-none overflow-hidden transition-all p-0 duration-300 "
+				className="bg-transparent border-none shadow-none overflow-hidden transition-all duration-300 transform group-hover:scale-[1.02]"
 				onMouseEnter={() => setIsHovered(true)}
 				onMouseLeave={() => setIsHovered(false)}
 				onClick={onClick}>
-				<CardContent className="p-0">
-					{/* Main Card Image */}
-					<div className="relative aspect-video rounded-md overflow-hidden bg-muted">
+				<CardContent className="p-0 relative">
+					{/* Main Card Container */}
+					<div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
+						{/* Background Image */}
 						<Image
 							src={video.backdrop}
 							alt={video.title}
 							fill
+							sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
 							className={`object-cover transition-all duration-500 ${
-								(imageLoaded ? "opacity-100" : "opacity-0",
-								isHovered ? "scale-110" : "scale-100")
-							}`}
+								imageLoaded ? "opacity-100" : "opacity-0"
+							} ${isHovered ? "scale-110" : "scale-100"}`}
 							onLoad={() => setImageLoaded(true)}
 						/>
 
@@ -70,7 +66,47 @@ const ContinueWatchingCard = ({
 							</div>
 						)}
 
-						{/* Progress bar at the bottom */}
+						{/* Gradient Overlay */}
+						<div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
+
+						{/* Remove button - top right */}
+						{onRemoveFromHistory && (
+							<div
+								className={`absolute top-3 right-3 z-20 transition-all duration-300 ${
+									isHovered ? "opacity-100 scale-100" : "opacity-0 scale-75"
+								}`}>
+								<Button
+									size="sm"
+									variant="destructive"
+									onClick={handleRemove}
+									disabled={removeLoading}
+									className="w-8 h-8 p-0 rounded-full bg-red-600/90 hover:bg-red-600 backdrop-blur-sm border border-white/20"
+									isLoading={removeLoading}
+									loadingText={
+										<Icon
+											icon="eos-icons:bubble-loading"
+											className="w-4 h-4 text-white"
+										/>
+									}>
+									<Icon icon="ic:round-delete" width="4em" height="4em" />
+								</Button>
+							</div>
+						)}
+
+						{/* Play button - center */}
+						<div
+							className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${
+								isHovered ? "opacity-100" : "opacity-0"
+							}`}>
+							<div className="w-16 h-16 rounded-full bg-primary/90 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-lg">
+								<Icon
+									icon="solar:play-bold"
+									className="w-8 h-8 text-white ml-1"
+								/>
+							</div>
+						</div>
+
+						{/* Progress bar */}
 						<div className="absolute bottom-0 left-0 right-0 h-1.5 bg-black/50">
 							<div
 								className="h-full bg-primary transition-all duration-300"
@@ -78,27 +114,21 @@ const ContinueWatchingCard = ({
 							/>
 						</div>
 
-						{/* Play icon overlay - shows on hover */}
-						{isHovered && (
-							<div className="absolute inset-0 flex items-center justify-center bg-black/30 transition-all duration-300">
-								<Icon icon="solar:play-bold" className="w-8 h-8 text-primary" />
-							</div>
-						)}
+						{/* Content overlay - bottom section */}
+						<div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+							{/* Title */}
+							<h2 className="text-lg font-bold mb-2 line-clamp-2 leading-tight drop-shadow-lg">
+								{video.title}
+							</h2>
+
+							{/* Time left */}
+							{video.timeLeft && video.timeLeft !== "Finished" && (
+								<div className="text-sm text-white/80">{video.timeLeft}</div>
+							)}
+						</div>
 					</div>
 				</CardContent>
 			</Card>
-
-			{/* Title below the card (always visible) */}
-			<div className="flex flex-col gap-2">
-				<h2 className="text-xl font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors duration-200">
-					{video.title}
-				</h2>
-
-				<div className="flex flex-col items-start justify-between mt-1 text-s text-muted-foreground">
-					<span>{video.progress || 0}% watched</span>
-					<span>{formatLastWatched(video.lastWatched)}</span>
-				</div>
-			</div>
 		</div>
 	);
 };

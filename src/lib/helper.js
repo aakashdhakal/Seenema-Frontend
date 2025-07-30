@@ -21,7 +21,7 @@ export const uploadVideo = async (formData, genres, tags, credits) => {
 
 const addGenreToVideo = async (videoId, genres) => {
 	try {
-		const response = await axios.post("/addGenreToVideo", {
+		const response = await axios.post("/genre/add", {
 			videoId,
 			genres,
 		});
@@ -34,7 +34,7 @@ const addGenreToVideo = async (videoId, genres) => {
 
 const addTagsToVideo = async (videoId, tags) => {
 	try {
-		const response = await axios.post("/addTagsToVideo", {
+		const response = await axios.post("/tags/add", {
 			videoId,
 			tags,
 		});
@@ -47,7 +47,7 @@ const addTagsToVideo = async (videoId, tags) => {
 
 const addCreditsToVideo = async (videoId, credits) => {
 	try {
-		const response = await axios.post("/addCreditsToVideo", {
+		const response = await axios.post("/people/add-credit", {
 			videoId,
 			credits,
 		});
@@ -60,7 +60,7 @@ const addCreditsToVideo = async (videoId, credits) => {
 
 export const addToWatchList = async (videoId) => {
 	try {
-		const response = await axios.post("/addToWatchList", { video_id: videoId });
+		const response = await axios.post("/watchlist/add", { video_id: videoId });
 		return response.data;
 	} catch (error) {
 		console.error("Error adding to watch list:", error);
@@ -70,9 +70,7 @@ export const addToWatchList = async (videoId) => {
 
 export const removeFromWatchList = async (videoId) => {
 	try {
-		const response = await axios.post("/removeFromWatchList", {
-			video_id: videoId,
-		});
+		const response = await axios.delete(`/watchlist/${videoId}`);
 		return response.data;
 	} catch (error) {
 		console.error("Error removing from watch list:", error);
@@ -82,7 +80,7 @@ export const removeFromWatchList = async (videoId) => {
 
 export const getWatchList = async () => {
 	try {
-		const response = await axios.get("/getWatchlist");
+		const response = await axios.get("/watchlist");
 		return response.data;
 	} catch (error) {
 		console.error("Error fetching watch list:", error);
@@ -92,12 +90,84 @@ export const getWatchList = async () => {
 
 export const checkIfVideoInWatchList = async (videoId) => {
 	try {
-		const response = await axios.get("/checkIfVideoInWatchList", {
-			params: { video_id: videoId },
-		});
+		const response = await axios.get(`/watchlist/check/${videoId}`);
 		return response.data;
 	} catch (error) {
 		console.error("Error checking if video is in watch list:", error);
+		throw error;
+	}
+};
+
+//notifications api handlers
+
+export const getNotifications = async (page = 1) => {
+	try {
+		const response = await axios.get("/notifications", {
+			params: { page },
+		});
+		return response.data;
+	} catch (error) {
+		console.error("Error fetching notifications:", error);
+		throw error;
+	}
+};
+
+export const markNotificationAsRead = async (id) => {
+	try {
+		const response = await axios.post(`/notifications/${id}/read`);
+		return response.data;
+	} catch (error) {
+		console.error("Error marking notification as read:", error);
+		throw error;
+	}
+};
+
+export const markAllNotificationsAsRead = async () => {
+	try {
+		const response = await axios.post("/notifications/read-all");
+		return response.data;
+	} catch (error) {
+		console.error("Error marking all notifications as read:", error);
+		throw error;
+	}
+};
+
+export const deleteNotification = async (id) => {
+	try {
+		const response = await axios.delete(`/notifications/${id}`);
+		return response.data;
+	} catch (error) {
+		console.error("Error deleting notification:", error);
+		throw error;
+	}
+};
+
+export const deleteAllNotifications = async () => {
+	try {
+		const response = await axios.delete("/notifications/delete-all");
+		return response.data;
+	} catch (error) {
+		console.error("Error deleting all notifications:", error);
+		throw error;
+	}
+};
+
+export const removeFromWatchHistory = async (id) => {
+	try {
+		const response = await axios.delete(`/history/${id}`);
+		return response;
+	} catch (error) {
+		console.error("Error removing from watchlist:", error);
+		throw error;
+	}
+};
+
+export const removeFromContinueWatching = async (id) => {
+	try {
+		const response = await axios.delete(`/history/continue-watching/${id}`);
+		return response;
+	} catch (error) {
+		console.error("Error removing from continue watching:", error);
 		throw error;
 	}
 };

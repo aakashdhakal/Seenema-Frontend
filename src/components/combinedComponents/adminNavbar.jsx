@@ -96,7 +96,8 @@ export default function AdminNavbar() {
 		// Only setup notifications if user is authenticated
 		if (!user?.user?.id) return;
 
-		console.log("Setting up Reverb notifications for user:", user.user.id);
+		console.log("Setting up Reverb notifications for user:", user.id);
+		console.log(echo.connector?.pusher?.connection);
 
 		// Listen for connection events
 		if (echo.connector?.pusher?.connection) {
@@ -120,8 +121,7 @@ export default function AdminNavbar() {
 		const adminChannel = echo
 			.private("admin.notifications")
 			.listen(".video.processing.status", (data) => {
-				//update status of video 
-				
+				//update status of video
 			})
 			.error((error) => {
 				console.error("Admin channel error:", error);
@@ -133,8 +133,8 @@ export default function AdminNavbar() {
 				adminChannel.stopListening(".video.processing.status");
 			}
 			echo.leaveChannel("admin.notifications");
-			if (user.user.role === "admin") {
-				echo.leaveChannel(`user.${user.user.id}`);
+			if (user.role === "admin") {
+				echo.leaveChannel(`user.${user.id}`);
 			}
 		};
 	}, [user?.user?.id]);

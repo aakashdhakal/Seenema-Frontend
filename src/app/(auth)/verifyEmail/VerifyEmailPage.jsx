@@ -19,7 +19,7 @@ export default function VerifyEmailPage() {
 	useEffect(() => {
 		if (!isLoading) {
 			// Only redirect verified users to home, allow unverified users to stay
-			if (user && user.email_verified_at) {
+			if (user && user.is_email_verified) {
 				router.replace("/home");
 			}
 		}

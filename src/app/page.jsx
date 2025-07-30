@@ -18,7 +18,7 @@ export default function HomePage() {
 	useEffect(() => {
 		// Redirect if user is already logged in
 		if (!isLoading && user) {
-			if (user.email_verified_at !== null) {
+			if (user.is_email_verified) {
 				router.push("/home");
 			} else {
 				router.push("/verifyEmail");
@@ -202,19 +202,13 @@ export default function HomePage() {
 							<Image src="/3.png" alt="StreamFlow" width={120} height={60} />
 						</div>
 						<div className="flex space-x-6 text-gray-400">
-							<Link
-								href="/"
-								className="hover:text-white transition-colors">
+							<Link href="/" className="hover:text-white transition-colors">
 								Privacy
 							</Link>
-							<Link
-								href="/"
-								className="hover:text-white transition-colors">
+							<Link href="/" className="hover:text-white transition-colors">
 								Terms
 							</Link>
-							<Link
-								href="/"
-								className="hover:text-white transition-colors">
+							<Link href="/" className="hover:text-white transition-colors">
 								Contact
 							</Link>
 						</div>

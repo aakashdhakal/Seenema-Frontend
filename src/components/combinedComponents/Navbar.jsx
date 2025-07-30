@@ -165,8 +165,8 @@ export default function Navbar() {
 										variant="ghost"
 										className="relative h-8 w-8 rounded-full p-0 hover:bg-accent/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
 										<UserAvatar
-											src={user.user.profile_picture}
-											fallback={user.user.name?.charAt(0).toUpperCase() || "U"}
+											src={user.profile_picture}
+											fallback={user.name?.charAt(0).toUpperCase() || "U"}
 											className="h-8 w-8"
 										/>
 									</Button>
@@ -178,12 +178,12 @@ export default function Navbar() {
 									<DropdownMenuLabel className="font-normal">
 										<div className="flex flex-col space-y-1 justify-center">
 											<p className="text-sm font-medium leading-none text-center">
-												{user.user.name || "User"}
+												{user.name || "User"}
 											</p>
 										</div>
 									</DropdownMenuLabel>
 									<DropdownMenuSeparator />
-									{user.user.role === "admin" && (
+									{user.role === "admin" && (
 										<DropdownMenuItem asChild>
 											<Link href="/admin" className="cursor-pointer">
 												<Icon

@@ -103,9 +103,9 @@ export default function VideoDetails() {
 			setLoading(true);
 			try {
 				const [videoRes, peopleRes, genresRes] = await Promise.all([
-					axios.get(`/getVideoById/${videoId}`),
-					axios.get("/getPeople"),
-					axios.get("/getGenres"),
+					axios.get(`/video/${videoId}`),
+					axios.get("/people/get"),
+					axios.get("/genre/get"),
 				]);
 
 				const videoData = videoRes.data;
@@ -314,7 +314,7 @@ export default function VideoDetails() {
 				personData.append("profile_picture", newPersonForm.profileImage);
 			}
 
-			const response = await axios.post("/addPerson", personData, {
+			const response = await axios.post("/people/create", personData, {
 				headers: { "Content-Type": "multipart/form-data" },
 			});
 

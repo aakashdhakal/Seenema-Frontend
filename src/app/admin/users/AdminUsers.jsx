@@ -49,7 +49,7 @@ export default function UsersPage() {
 	const fetchUsers = async () => {
 		try {
 			setLoading(true);
-			const response = await axiosInstance.get("/getUsers");
+			const response = await axiosInstance.get("/users");
 			setUsers(response.data.users || []);
 		} catch (error) {
 			console.error("Error fetching users:", error);
@@ -100,8 +100,8 @@ export default function UsersPage() {
 		total: users.length,
 		admins: users.filter((user) => user.role === "admin").length,
 		users: users.filter((user) => user.role === "user").length,
-		verified: users.filter((user) => user.email_verified_at).length,
-		unverified: users.filter((user) => !user.email_verified_at).length,
+		verified: users.filter((user) => user.is_email_verified).length,
+		unverified: users.filter((user) => !user.is_email_verified).length,
 	};
 
 	if (loading) {
@@ -329,7 +329,7 @@ export default function UsersPage() {
 												<StatusBadge
 													type="verification"
 													status={
-														user.email_verified_at ? "verified" : "unverified"
+														user.is_email_verified ? "verified" : "unverified"
 													}
 													showIcon={true}
 													size="sm"
@@ -361,7 +361,7 @@ export default function UsersPage() {
 															/>
 															Edit User
 														</DropdownMenuItem>
-														{!user.email_verified_at && (
+														{!user.is_email_verified && (
 															<DropdownMenuItem>
 																<Icon
 																	icon="solar:letter-bold-duotone"

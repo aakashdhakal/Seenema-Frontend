@@ -67,11 +67,11 @@ export default function AdminSidebar() {
 		if (isLoading) return; // Wait for auth state to load
 		if (!isLoading) {
 			console.log("Admin user detected:", user);
-			if (user && user.user.role === "admin") {
+			if (user && user.role === "admin") {
 				setAdmin({
-					name: user.user.name || "Admin User",
-					email: user.user.email || "contact@aakashdhakal.com.np",
-					avatar: user.user.avatar || "/admin-avatar.png",
+					name: user.name || "Admin User",
+					email: user.email || "contact@aakashdhakal.com.np",
+					avatar: user.avatar || "/admin-avatar.png",
 				});
 			}
 		}

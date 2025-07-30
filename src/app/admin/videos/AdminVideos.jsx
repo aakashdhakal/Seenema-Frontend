@@ -148,8 +148,8 @@ export default function AdminVideos() {
 		try {
 			setLoading(true);
 			const [videosResponse, genresResponse] = await Promise.all([
-				axiosInstance.get("/getAllVideos"),
-				axiosInstance.get("/getGenres"),
+				axiosInstance.get("/video/all"),
+				axiosInstance.get("/genre/get"),
 			]);
 
 			setVideos(videosResponse.data || []);
@@ -260,7 +260,7 @@ export default function AdminVideos() {
 
 	const handleDeleteVideo = async (videoId) => {
 		try {
-			await axiosInstance.delete(`/deleteVideo/${videoId}`);
+			await axiosInstance.delete(`/video/${videoId}`);
 			setVideos((prev) => prev.filter((video) => video.id !== videoId));
 			toast.success("Video deleted successfully");
 		} catch (error) {

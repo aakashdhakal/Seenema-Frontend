@@ -18,7 +18,7 @@ export default function AdminRoute({ children }) {
 		if (!user) {
 			// If not logged in, redirect to the login page
 			router.replace("/login");
-		} else if (user.user?.role !== "admin") {
+		} else if (user?.role !== "admin") {
 			// If logged in but not an admin, redirect to an access denied page
 			router.replace("/denied");
 		}
@@ -26,7 +26,7 @@ export default function AdminRoute({ children }) {
 
 	// While loading or if the user is not an admin, show a loading screen.
 	// This prevents a flash of content before the redirect happens.
-	if (isLoading || !user || user.user?.role !== "admin") {
+	if (isLoading || !user || user?.role !== "admin") {
 		return <PageLoadingComponent />;
 	}
 

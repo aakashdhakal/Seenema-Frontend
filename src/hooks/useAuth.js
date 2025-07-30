@@ -18,7 +18,7 @@ export const useAuth = () => {
 		error,
 		isLoading,
 		mutate,
-	} = useSWR("/user", fetcher, {
+	} = useSWR("/auth/user", fetcher, {
 		revalidateOnFocus: false, // don't re-fetch on focus
 		revalidateOnReconnect: true, // don't re-fetch on reconnect
 	});
@@ -27,7 +27,7 @@ export const useAuth = () => {
 		await getCSRFToken(); // this triggers Laravel to send back CSRF token in cookie
 
 		try {
-			await axios.post("/login", { email, password });
+			await axios.post("/auth/login", { email, password });
 			await mutate(); // refresh user
 		} catch (err) {
 			throw new Error(err.response?.data?.message || "Login failed");
@@ -38,7 +38,7 @@ export const useAuth = () => {
 		await getCSRFToken();
 
 		try {
-			if (user) await axios.post("/logout");
+			if (user) await axios.post("/auth/logout");
 			await mutate(null);
 		} catch (err) {
 			throw new Error(err.response?.data?.message || "Logout failed");
@@ -53,7 +53,7 @@ export const useAuth = () => {
 		await getCSRFToken();
 
 		try {
-			const res = await axios.post("/email/verification-notification");
+			const res = await axios.post("/auth/email/notify");
 			if (res.status === 200) {
 				return res.data;
 			} else {
@@ -70,7 +70,7 @@ export const useAuth = () => {
 		await getCSRFToken();
 
 		try {
-			const res = await axios.post("/register", {
+			const res = await axios.post("/auth/register", {
 				name,
 				email,
 				password,

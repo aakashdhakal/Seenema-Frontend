@@ -117,7 +117,7 @@ export default function SignupPage() {
 	// Redirect if user is already logged in
 	useEffect(() => {
 		if (!isLoading && user) {
-			if (user.email_verified_at !== null) {
+			if (user.is_email_verified) {
 				router.replace("/home");
 			} else {
 				router.replace("/verifyEmail");

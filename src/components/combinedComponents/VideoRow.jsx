@@ -6,10 +6,10 @@ import { Icon } from "@iconify/react";
 import PosterCard from "./PosterCard";
 import ContinueWatchingCard from "./ContinueWatchingCard";
 
-export default function MovieRow({
+export default function VideoRow({
 	title,
-	movies,
-	onMovieClick,
+	videos,
+	onVideoClick,
 	onRemove,
 	type = "poster", // "poster" or "continue-watching"
 	className = "",
@@ -25,7 +25,7 @@ export default function MovieRow({
 		}
 	};
 
-	if (!movies || movies.length === 0) {
+	if (!videos || videos.length === 0) {
 		return null;
 	}
 
@@ -67,16 +67,16 @@ export default function MovieRow({
 					ref={scrollRef}
 					className="flex gap-6 overflow-x-auto scrollbar-hide pb-6"
 					style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-					{movies.map((movie) => (
-						<div key={movie.id}>
+					{videos.map((video) => (
+						<div key={video.id}>
 							{type === "continue-watching" ? (
 								<ContinueWatchingCard
-									video={movie}
-									onClick={() => onMovieClick(movie)}
-									onRemove={() => onRemove && onRemove(movie.watchHistoryId)}
+									video={video}
+									onClick={() => onVideoClick(video)}
+									onRemoveFromHistory={() => onRemove && onRemove(video.id)}
 								/>
 							) : (
-								<PosterCard video={movie} onClick={() => onMovieClick(movie)} />
+								<PosterCard video={video} onClick={() => onVideoClick(video)} />
 							)}
 						</div>
 					))}

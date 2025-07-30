@@ -75,7 +75,7 @@ export default function NotFound() {
 					</Link>
 
 					<Link
-						href="/trending"
+						href="/video/trending"
 						className="flex flex-col items-center p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors duration-200 group">
 						<Icon
 							icon="solar:fire-bold"

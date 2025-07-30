@@ -9,13 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@iconify/react";
 import axios from "@/lib/axios";
-import MovieRow from "@/components/combinedComponents/MovieRow";
+import VideoRow from "@/components/combinedComponents/VideoRow";
 import {
 	checkIfVideoInWatchList,
 	addToWatchList,
 	removeFromWatchList,
 } from "@/lib/helper";
 import { toast } from "sonner";
+import echo from "@/lib/echo"; // Import your Echo instance
 
 export default function HomePage() {
 	const { user, isLoading } = useAuthContext();
@@ -26,13 +27,15 @@ export default function HomePage() {
 	const [addWatchListLoading, setAddWatchListLoading] = useState(false);
 	const [isWatchlisted, setIsWatchlisted] = useState(false);
 	const [error, setError] = useState(null);
+	// State for connection status
+	const [connectionStatus, setConnectionStatus] = useState("disconnected");
 
 	// State for each section
-	const [featuredMovie, setFeaturedMovie] = useState(null);
-	const [trendingMovies, setTrendingMovies] = useState([]);
-	const [popularMovies, setPopularMovies] = useState([]);
+	const [featuredVideo, setFeaturedVideo] = useState(null);
+	const [trendingVideos, setTrendingVideos] = useState([]);
+	const [popularVideos, setPopularVideos] = useState([]);
 	const [newReleases, setNewReleases] = useState([]);
-	const [actionMovies, setActionMovies] = useState([]);
+	const [actionVideos, setActionVideos] = useState([]);
 	const [continueWatching, setContinueWatching] = useState([]);
 	const [recommended, setRecommended] = useState([]);
 
@@ -60,26 +63,19 @@ export default function HomePage() {
 	};
 
 	// Handle continue watching removal
-	const handleRemoveFromContinueWatching = async (watchHistoryId) => {
-		try {
-			await axios.delete(`/removeContinueWatching/${watchHistoryId}`);
-			setContinueWatching((prev) =>
-				prev.filter((item) => item.watchHistoryId !== watchHistoryId),
-			);
-		} catch (err) {
-			console.error("Error removing from continue watching:", err);
-		}
+	const handleRemoveFromContinueWatching = async (videoId) => {
+		setContinueWatching((prev) => prev.filter((video) => video.id !== videoId));
 	};
 
 	// Handle watchlist toggle
 	const handleWatchlistToggle = async (e) => {
 		setAddWatchListLoading(true);
-		const isVideoInWatchlist = await checkIfVideoInWatchList(featuredMovie.id);
+		const isVideoInWatchlist = await checkIfVideoInWatchList(featuredVideo.id);
 		if (isVideoInWatchlist.exists) {
 			setIsWatchlisted(true);
 		}
 		if (isWatchlisted) {
-			const response = await removeFromWatchList(featuredMovie.id);
+			const response = await removeFromWatchList(featuredVideo.id);
 			if (response.success) {
 				setIsWatchlisted(false);
 				toast.success("Removed from watchlist");
@@ -87,8 +83,7 @@ export default function HomePage() {
 				toast.error("Failed to remove from watchlist");
 			}
 		} else {
-			const response = await addToWatchList(featuredMovie.id);
-			console.log("Watchlist response:", response);
+			const response = await addToWatchList(featuredVideo.id);
 			if (response.success) {
 				setIsWatchlisted(true);
 				toast.success("Added to watchlist");
@@ -99,14 +94,14 @@ export default function HomePage() {
 		setAddWatchListLoading(false);
 	};
 
-	// Handle movie click
-	const handleMovieClick = (movie) => {
-		router.push(`/video/${movie.slug}`);
+	// Handle Video click
+	const handleVideoClick = (Video) => {
+		router.push(`/video/${Video.slug}`);
 	};
 
 	// Handle continue watching click
-	const handleContinueWatchingClick = (movie) => {
-		router.push(`/video/watch/${movie.id}?t=${movie.currentTime}`);
+	const handleContinueWatchingClick = (Video) => {
+		router.push(`/video/watch/${Video.id}?t=${Video.currentTime}`);
 	};
 
 	// Handle hydration
@@ -118,16 +113,31 @@ export default function HomePage() {
 	useEffect(() => {
 		if (user) {
 			setUserData({
-				name: user.user?.name || "User",
-				email: user.user?.email || "",
-				avatar: user.user?.avatar || null,
+				name: user?.name || "User",
+				email: user?.email || "",
+				avatar: user?.avatar || null,
 			});
 		}
 	}, [user]);
 
+	// Setup Laravel Reverb notifications
+	useEffect(() => {
+		if (!user?.user?.id) return;
+
+		const channel = echo
+			.private("user." + user.id)
+			.listen(".notification", (e) => {
+				console.log(e);
+			});
+
+		return () => {
+			echo.leaveChannel("private-user." + user.id);
+		};
+	}, [user?.user?.id]);
+
 	// Redirect to login if not authenticated
 	useEffect(() => {
-		if (user && !user.user.email_verified_at) {
+		if (user && !user.is_email_verified) {
 			router.replace("/verifyEmail");
 			return;
 		}
@@ -147,9 +157,9 @@ export default function HomePage() {
 				setError(null);
 
 				// API Call 1: Get featured content
-				const featuredResponse = await axios.get("/getFeaturedVideo");
+				const featuredResponse = await axios.get("/video/featured");
 				const featured = featuredResponse.data;
-				setFeaturedMovie({
+				setFeaturedVideo({
 					id: featured.id,
 					title: featured.title,
 					description:
@@ -168,8 +178,8 @@ export default function HomePage() {
 				});
 
 				// API Call 2: Get trending content
-				const trendingResponse = await axios.get("/getTrendingVideos");
-				setTrendingMovies(
+				const trendingResponse = await axios.get("/video/trending");
+				setTrendingVideos(
 					trendingResponse.data.map((video) => ({
 						id: video.id,
 						title: video.title,
@@ -184,8 +194,8 @@ export default function HomePage() {
 				);
 
 				// API Call 3: Get popular content
-				const popularResponse = await axios.get("/getPopularVideos");
-				setPopularMovies(
+				const popularResponse = await axios.get("/video/popular");
+				setPopularVideos(
 					popularResponse.data.map((video) => ({
 						id: video.id,
 						title: video.title,
@@ -200,7 +210,7 @@ export default function HomePage() {
 				);
 
 				// API Call 4: Get new releases
-				const newReleasesResponse = await axios.get("/getNewReleases");
+				const newReleasesResponse = await axios.get("/video/new-release");
 				setNewReleases(
 					newReleasesResponse.data.map((video) => ({
 						id: video.id,
@@ -216,8 +226,8 @@ export default function HomePage() {
 				);
 
 				// API Call 5: Get action & adventure content
-				const actionResponse = await axios.get("/getVideosByCategory/action");
-				setActionMovies(
+				const actionResponse = await axios.get("/video/category/action");
+				setActionVideos(
 					actionResponse.data.map((video) => ({
 						id: video.id,
 						title: video.title,
@@ -233,7 +243,7 @@ export default function HomePage() {
 
 				// API Call 6: Get user's continue watching
 				const continueWatchingResponse = await axios.get(
-					"/getContinueWatching",
+					"/video/continue-watching",
 				);
 				setContinueWatching(
 					continueWatchingResponse.data.map((record) => {
@@ -264,7 +274,7 @@ export default function HomePage() {
 				);
 
 				// API Call 7: Get recommendations
-				const recommendedResponse = await axios.get("/getRecommendations");
+				const recommendedResponse = await axios.get("/video/recommendations");
 				setRecommended(
 					recommendedResponse.data.map((video) => ({
 						id: video.id,
@@ -314,7 +324,7 @@ export default function HomePage() {
 		);
 	}
 
-	if (!featuredMovie) {
+	if (!featuredVideo) {
 		return <PageLoadingComponent />;
 	}
 
@@ -326,7 +336,7 @@ export default function HomePage() {
 			<section className="relative h-[60vh] sm:h-[70vh] md:h-[80vh] lg:h-[85vh] overflow-hidden">
 				<div
 					className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-					style={{ backgroundImage: `url(${featuredMovie.backdrop})` }}>
+					style={{ backgroundImage: `url(${featuredVideo.backdrop})` }}>
 					<div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/80 sm:via-background/70 to-transparent" />
 					<div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/60" />
 				</div>
@@ -336,47 +346,47 @@ export default function HomePage() {
 						<div className="max-w-full sm:max-w-2xl md:max-w-3xl">
 							{/* Title */}
 							<h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 md:mb-8 leading-tight text-primary">
-								{featuredMovie.title}
+								{featuredVideo.title}
 							</h1>
 
 							{/* Metadata */}
 							<div className="flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6 mb-4 sm:mb-6 md:mb-8 text-foreground/90">
-								{featuredMovie.rating > 0 && (
+								{featuredVideo.rating > 0 && (
 									<div className="flex items-center gap-1 sm:gap-2 backdrop-blur-sm px-2 sm:px-3 py-1 rounded-full bg-foreground/10">
 										<Icon
 											icon="solar:star-bold-duotone"
 											className="w-3 h-3 sm:w-4 md:w-5 md:h-5 text-yellow-400"
 										/>
 										<span className="font-semibold text-xs sm:text-sm md:text-base">
-											{featuredMovie.rating}
+											{featuredVideo.rating}
 										</span>
 									</div>
 								)}
 								<span className="text-sm sm:text-base md:text-lg">
-									{featuredMovie.year}
+									{featuredVideo.year}
 								</span>
 								<span className="text-sm sm:text-base md:text-lg">
-									{featuredMovie.duration}
+									{featuredVideo.duration}
 								</span>
 								<Badge
 									variant="outline"
 									className="border-primary/50 text-primary bg-primary/10 hover:bg-primary/20 text-xs sm:text-sm">
 									{
-										featuredMovie.resolutions[
-											featuredMovie.resolutions.length - 1
+										featuredVideo.resolutions[
+											featuredVideo.resolutions.length - 1
 										]
 									}
 								</Badge>
-								{featuredMovie.content_rating && (
+								{featuredVideo.content_rating && (
 									<Badge variant="secondary" className="text-xs sm:text-sm">
-										{featuredMovie.content_rating}
+										{featuredVideo.content_rating}
 									</Badge>
 								)}
 							</div>
 
 							{/* Description */}
 							<p className="text-sm sm:text-base md:text-lg lg:text-xl mb-6 sm:mb-8 md:mb-10 leading-relaxed max-w-full sm:max-w-xl md:max-w-2xl font-light text-foreground/80 line-clamp-3 sm:line-clamp-none">
-								{featuredMovie.description}
+								{featuredVideo.description}
 							</p>
 
 							{/* Action Buttons */}
@@ -384,7 +394,7 @@ export default function HomePage() {
 								<Button
 									variant={"default"}
 									onClick={() =>
-										router.push(`/video/watch/${featuredMovie.id}`)
+										router.push(`/video/watch/${featuredVideo.id}`)
 									}>
 									<Icon
 										icon="solar:play-bold"
@@ -394,7 +404,7 @@ export default function HomePage() {
 								</Button>
 								<Button
 									variant="secondary"
-									onClick={() => router.push(`/video/${featuredMovie.slug}`)}>
+									onClick={() => router.push(`/video/${featuredVideo.slug}`)}>
 									<Icon icon="ic:round-info" width="2em" height="2em" />
 									More Info
 								</Button>
@@ -421,10 +431,10 @@ export default function HomePage() {
 			</section>
 
 			{/* Continue Watching Section */}
-			<MovieRow
+			<VideoRow
 				title={`Continue Watching for ${userData?.name}`}
-				movies={continueWatching}
-				onMovieClick={handleContinueWatchingClick}
+				videos={continueWatching}
+				onVideoClick={handleContinueWatchingClick}
 				onRemove={handleRemoveFromContinueWatching}
 				type="continue-watching"
 				className={`relative px-4 sm:px-6 ${
@@ -432,7 +442,7 @@ export default function HomePage() {
 				}`}
 			/>
 
-			{/* Movie Rows */}
+			{/* Video Rows */}
 			<section
 				className={`relative px-4 sm:px-6 ${
 					continueWatching && continueWatching.length > 0
@@ -440,46 +450,46 @@ export default function HomePage() {
 						: "-mt-12 sm:-mt-16 md:-mt-20 lg:-mt-24"
 				} z-10 pb-10 sm:pb-16 md:pb-20`}>
 				{/* Recommended for You */}
-				<MovieRow
+				<VideoRow
 					title="Recommended for You"
-					movies={recommended}
-					onMovieClick={handleMovieClick}
+					videos={recommended}
+					onVideoClick={handleVideoClick}
 					type="poster"
 					className="mb-6 sm:mb-8 md:mb-10"
 				/>
 
 				{/* Trending Now */}
-				<MovieRow
+				<VideoRow
 					title="Trending Now"
-					movies={trendingMovies}
-					onMovieClick={handleMovieClick}
+					videos={trendingVideos}
+					onVideoClick={handleVideoClick}
 					type="poster"
 					className="mb-6 sm:mb-8 md:mb-10"
 				/>
 
 				{/* Popular on Seenema */}
-				<MovieRow
+				<VideoRow
 					title="Popular on Seenema"
-					movies={popularMovies}
-					onMovieClick={handleMovieClick}
+					videos={popularVideos}
+					onVideoClick={handleVideoClick}
 					type="poster"
 					className="mb-6 sm:mb-8 md:mb-10"
 				/>
 
 				{/* New Releases */}
-				<MovieRow
+				<VideoRow
 					title="New Releases"
-					movies={newReleases}
-					onMovieClick={handleMovieClick}
+					videos={newReleases}
+					onVideoClick={handleVideoClick}
 					type="poster"
 					className="mb-6 sm:mb-8 md:mb-10"
 				/>
 
 				{/* Action & Adventure */}
-				<MovieRow
+				<VideoRow
 					title="Action & Adventure"
-					movies={actionMovies}
-					onMovieClick={handleMovieClick}
+					videos={actionVideos}
+					onVideoClick={handleVideoClick}
 					type="poster"
 					className="mb-6 sm:mb-8 md:mb-10"
 				/>

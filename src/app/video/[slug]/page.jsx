@@ -104,7 +104,7 @@ export default function VideoDetailsPage() {
 				setIsLoading(true);
 				setError(null);
 
-				const response = await axios.get(`/getVideoBySlug/${slug}`);
+				const response = await axios.get(`/video/${slug}`);
 				const videoInfo = response.data;
 
 				const transformedData = {

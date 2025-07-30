@@ -168,7 +168,7 @@ async function startMainPlayback(
 		clearInterval(watchHistoryInterval);
 		watchHistoryInterval = setInterval(() => {
 			if (!videoElement.paused && !isSeeking) {
-				axios.post("/updateWatchHistory", {
+				axios.post("/history/update", {
 					videoId,
 					currentTime: videoElement.currentTime,
 				});

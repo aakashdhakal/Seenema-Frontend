@@ -60,12 +60,6 @@ export default function PosterCard({ video, onClick, onRemoveFromWatchlist }) {
 		router.push(`/video/watch/${video.id}`);
 	};
 
-	const handleInfo = (e) => {
-		e.preventDefault();
-		e.stopPropagation();
-		router.push(`/video/${video.slug}`);
-	};
-
 	// Handle card click - only navigate to info page when clicking on non-interactive areas
 	const handleCardClick = (e) => {
 		// Check if the click target is a button or inside a button
