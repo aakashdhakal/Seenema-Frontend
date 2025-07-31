@@ -94,7 +94,7 @@ export default function AdminNavbar() {
 		setMounted(true);
 
 		// Only setup notifications if user is authenticated
-		if (!user?.user?.id) return;
+		if (!user?.id) return;
 
 		console.log("Setting up Reverb notifications for user:", user.id);
 		console.log(echo.connector?.pusher?.connection);
@@ -137,7 +137,7 @@ export default function AdminNavbar() {
 				echo.leaveChannel(`user.${user.id}`);
 			}
 		};
-	}, [user?.user?.id]);
+	}, [user?.id]);
 
 	const handleNotification = (data, source) => {
 		const notification = {
@@ -483,8 +483,8 @@ export default function AdminNavbar() {
 									<Skeleton className="h-8 w-8 rounded-full" />
 								) : (
 									<UserAvatar
-										src={user?.user?.profile_picture}
-										fallback={user?.user?.name?.charAt(0).toUpperCase() || "U"}
+										src={user?.profile_picture}
+										fallback={user?.name?.charAt(0).toUpperCase() || "U"}
 									/>
 								)}
 							</Button>
@@ -493,10 +493,10 @@ export default function AdminNavbar() {
 							<DropdownMenuLabel className="font-normal">
 								<div className="flex flex-col space-y-1">
 									<p className="text-sm font-medium leading-none">
-										{user?.user?.name || "Admin User"}
+										{user?.name || "Admin User"}
 									</p>
 									<p className="text-xs leading-none text-muted-foreground">
-										{user?.user?.email || "admin@example.com"}
+										{user?.email || "admin@example.com"}
 									</p>
 								</div>
 							</DropdownMenuLabel>

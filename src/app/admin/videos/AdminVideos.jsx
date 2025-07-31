@@ -53,7 +53,7 @@ export default function AdminVideos() {
 
 	// Setup Laravel Reverb notifications
 	useEffect(() => {
-		if (!user?.user?.id) return;
+		if (!user?.id) return;
 
 		const conn = echo.connector?.pusher?.connection;
 		if (conn) {
@@ -79,7 +79,7 @@ export default function AdminVideos() {
 			testChannel.stopListening(".test.event");
 			echo.leaveChannel("test-channel");
 		};
-	}, [user?.user?.id]);
+	}, [user?.id]);
 
 	// Handle video status updates in real-time
 	const handleVideoStatusUpdate = (data) => {

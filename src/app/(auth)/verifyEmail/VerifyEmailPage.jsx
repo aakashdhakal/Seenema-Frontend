@@ -129,7 +129,7 @@ export default function VerifyEmailPage() {
 								Verification email sent to:
 							</p>
 							<p className="text-primary font-mono text-lg break-all">
-								{user?.user.email || "your email"}
+								{user.email || "your email"}
 							</p>
 						</div>
 

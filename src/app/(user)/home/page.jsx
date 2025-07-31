@@ -122,7 +122,7 @@ export default function HomePage() {
 
 	// Setup Laravel Reverb notifications
 	useEffect(() => {
-		if (!user?.user?.id) return;
+		if (!user?.id) return;
 
 		const channel = echo
 			.private("user." + user.id)
@@ -133,7 +133,7 @@ export default function HomePage() {
 		return () => {
 			echo.leaveChannel("private-user." + user.id);
 		};
-	}, [user?.user?.id]);
+	}, [user?.id]);
 
 	// Redirect to login if not authenticated
 	useEffect(() => {
