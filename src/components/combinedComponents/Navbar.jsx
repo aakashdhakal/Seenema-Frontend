@@ -18,6 +18,7 @@ import { usePathname, useRouter } from "next/navigation";
 import UserAvatar from "../singleComponents/UserAvatar";
 import Image from "next/image";
 import { useAuthContext } from "@/context/AuthContext";
+import NotificationComponent from "./NotificationComponent";
 
 export default function Navbar() {
 	const [isScrolled, setIsScrolled] = useState(false);
@@ -154,12 +155,16 @@ export default function Navbar() {
 								</div>
 							</form>
 						</div>
+						{/* Notifications Dropdown */}
+						<NotificationComponent />
+
+						{/* Divider */}
 
 						{/* User Profile Dropdown */}
 						{loading || !user ? (
 							<Skeleton className="h-8 w-8 rounded-full" />
 						) : (
-							<DropdownMenu>
+							<DropdownMenu modal={false}>
 								<DropdownMenuTrigger asChild>
 									<Button
 										variant="ghost"

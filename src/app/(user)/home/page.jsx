@@ -330,8 +330,6 @@ export default function HomePage() {
 
 	return (
 		<div className="min-h-screen bg-background">
-			<Navbar />
-
 			{/* Featured Hero Section */}
 			<section className="relative h-[60vh] sm:h-[70vh] md:h-[80vh] lg:h-[85vh] overflow-hidden">
 				<div
