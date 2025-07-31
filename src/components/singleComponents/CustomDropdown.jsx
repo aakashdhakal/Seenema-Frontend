@@ -29,7 +29,7 @@ export default function CustomDropdown({
 	};
 
 	return (
-		<DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+		<DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
 			<DropdownMenuTrigger asChild>
 				<Button
 					variant={variant}
@@ -40,9 +40,7 @@ export default function CustomDropdown({
 					<span className="text-sm">{selectedOption || placeholder}</span>
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent
-				className="bg-card border-border min-w-[120px]"
-				align="end">
+			<DropdownMenuContent className="bg-card border-border min-w-[120px] w-[--radix-dropdown-menu-trigger-width]">
 				{options.map((option, index) => (
 					<DropdownMenuItem
 						key={`${option}-${index}`}

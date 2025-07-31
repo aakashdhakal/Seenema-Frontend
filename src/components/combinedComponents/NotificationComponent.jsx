@@ -38,6 +38,8 @@ export default function NotificationComponent() {
 	const [isOpen, setIsOpen] = useState(false);
 	const scrollRef = useRef(null);
 	const [deleteLoadingId, setDeleteLoadingId] = useState(null);
+	const [markLoading, setMarkLoading] = useState(null);
+	const [clearLoading, setClearLoading] = useState(null);
 	// Update unread count
 	const updateUnreadCount = (list) => {
 		const count = list.filter((n) => !n.read).length;
@@ -124,6 +126,7 @@ export default function NotificationComponent() {
 
 	// Mark all as read
 	const markAllAsRead = async () => {
+		setMarkLoading(true);
 		try {
 			await axios.post("/notifications/mark-all-as-read");
 			const updated = notifications.map((n) => ({ ...n, read: true }));
@@ -133,10 +136,12 @@ export default function NotificationComponent() {
 		} catch (err) {
 			toast.error("Failed to mark notifications as read");
 		}
+		setMarkLoading(false);
 	};
 
 	// Clear all notifications
 	const clearAll = async () => {
+		setClearLoading(true);
 		try {
 			await axios.post("/notifications/delete-all");
 			setNotifications([]);
@@ -147,6 +152,7 @@ export default function NotificationComponent() {
 		} catch (err) {
 			toast.error("Failed to clear notifications");
 		}
+		setClearLoading(false);
 	};
 
 	// Handle notification click
@@ -245,6 +251,8 @@ export default function NotificationComponent() {
 									size="sm"
 									onClick={markAllAsRead}
 									disabled={!unreadCount}
+									isLoading={markLoading}
+									loadingText={"Marking..."}
 									className="h-6 px-2 text-xs">
 									Mark all read
 								</Button>
@@ -252,6 +260,8 @@ export default function NotificationComponent() {
 									variant="ghost"
 									size="sm"
 									onClick={clearAll}
+									isLoading={clearLoading}
+									loadingText={"Clearing..."}
 									className="h-6 px-2 text-xs text-red-600 hover:text-red-700">
 									Clear all
 								</Button>

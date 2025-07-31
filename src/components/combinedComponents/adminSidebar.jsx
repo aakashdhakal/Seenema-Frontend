@@ -38,9 +38,9 @@ const navigationItems = [
 		icon: "solar:users-group-two-rounded-bold-duotone",
 	},
 	{
-		title: "Analytics",
-		url: "/admin/analytics",
-		icon: "solar:chart-2-bold-duotone",
+		title: "Notifications",
+		url: "/admin/notifications",
+		icon: "lets-icons:bell-fill",
 	},
 ];
 

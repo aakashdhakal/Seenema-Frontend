@@ -70,8 +70,7 @@ export default function HomePage() {
 	// Handle watchlist toggle
 	const handleWatchlistToggle = async (e) => {
 		setAddWatchListLoading(true);
-		const isVideoInWatchlist = await checkIfVideoInWatchList(featuredVideo.id);
-		if (isVideoInWatchlist.exists) {
+		if (featuredVideo.exists_in_watchlist) {
 			setIsWatchlisted(true);
 		}
 		if (isWatchlisted) {
@@ -148,6 +147,7 @@ export default function HomePage() {
 	}, [user, isLoading, router]);
 
 	// Fetch home data
+	// Fetch home data
 	useEffect(() => {
 		const fetchHomeData = async () => {
 			if (!user) return;
@@ -156,8 +156,26 @@ export default function HomePage() {
 				setLoading(true);
 				setError(null);
 
-				// API Call 1: Get featured content
-				const featuredResponse = await axios.get("/video/featured");
+				// Fetch all APIs in parallel instead of sequentially
+				const [
+					featuredResponse,
+					trendingResponse,
+					popularResponse,
+					newReleasesResponse,
+					actionResponse,
+					continueWatchingResponse,
+					recommendedResponse,
+				] = await Promise.all([
+					axios.get("/video/featured"),
+					axios.get("/video/trending"),
+					axios.get("/video/popular"),
+					axios.get("/video/new-release"),
+					axios.get("/video/category/action"),
+					axios.get("/video/continue-watching"),
+					axios.get("/video/recommendations"),
+				]);
+
+				// 1️⃣ Featured Video
 				const featured = featuredResponse.data;
 				setFeaturedVideo({
 					id: featured.id,
@@ -177,8 +195,7 @@ export default function HomePage() {
 					exists_in_watchlist: featured.exists_in_watchlist,
 				});
 
-				// API Call 2: Get trending content
-				const trendingResponse = await axios.get("/video/trending");
+				// 2️⃣ Trending
 				setTrendingVideos(
 					trendingResponse.data.map((video) => ({
 						id: video.id,
@@ -193,8 +210,7 @@ export default function HomePage() {
 					})),
 				);
 
-				// API Call 3: Get popular content
-				const popularResponse = await axios.get("/video/popular");
+				// 3️⃣ Popular
 				setPopularVideos(
 					popularResponse.data.map((video) => ({
 						id: video.id,
@@ -209,8 +225,7 @@ export default function HomePage() {
 					})),
 				);
 
-				// API Call 4: Get new releases
-				const newReleasesResponse = await axios.get("/video/new-release");
+				// 4️⃣ New Releases
 				setNewReleases(
 					newReleasesResponse.data.map((video) => ({
 						id: video.id,
@@ -225,8 +240,7 @@ export default function HomePage() {
 					})),
 				);
 
-				// API Call 5: Get action & adventure content
-				const actionResponse = await axios.get("/video/category/action");
+				// 5️⃣ Action & Adventure
 				setActionVideos(
 					actionResponse.data.map((video) => ({
 						id: video.id,
@@ -241,10 +255,7 @@ export default function HomePage() {
 					})),
 				);
 
-				// API Call 6: Get user's continue watching
-				const continueWatchingResponse = await axios.get(
-					"/video/continue-watching",
-				);
+				// 6️⃣ Continue Watching
 				setContinueWatching(
 					continueWatchingResponse.data.map((record) => {
 						const video = record.video;
@@ -273,8 +284,7 @@ export default function HomePage() {
 					}),
 				);
 
-				// API Call 7: Get recommendations
-				const recommendedResponse = await axios.get("/video/recommendations");
+				// 7️⃣ Recommended
 				setRecommended(
 					recommendedResponse.data.map((video) => ({
 						id: video.id,
@@ -349,17 +359,6 @@ export default function HomePage() {
 
 							{/* Metadata */}
 							<div className="flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6 mb-4 sm:mb-6 md:mb-8 text-foreground/90">
-								{featuredVideo.rating > 0 && (
-									<div className="flex items-center gap-1 sm:gap-2 backdrop-blur-sm px-2 sm:px-3 py-1 rounded-full bg-foreground/10">
-										<Icon
-											icon="solar:star-bold-duotone"
-											className="w-3 h-3 sm:w-4 md:w-5 md:h-5 text-yellow-400"
-										/>
-										<span className="font-semibold text-xs sm:text-sm md:text-base">
-											{featuredVideo.rating}
-										</span>
-									</div>
-								)}
 								<span className="text-sm sm:text-base md:text-lg">
 									{featuredVideo.year}
 								</span>
@@ -417,7 +416,18 @@ export default function HomePage() {
 											height="2em"
 										/>
 									}>
-									<Icon icon={"solar:bookmark-linear"} className="w-4 h-4" />
+									{featuredVideo.exists_in_watchlist ? (
+										<Icon
+											icon="solar:bookmark-bold"
+											className="w-4 h-4 sm:w-5 md:w-6 lg:w-7 md:h-6 lg:h-7"
+										/>
+									) : (
+										<Icon
+											icon="hugeicons:bookmark-add-02"
+											width="2em"
+											height="2em"
+										/>
+									)}
 								</Button>
 							</div>
 						</div>

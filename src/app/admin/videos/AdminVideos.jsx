@@ -276,9 +276,6 @@ export default function AdminVideos() {
 			case "Edit Video":
 				window.location.href = `/admin/videos/${video.id}`;
 				break;
-			case "View Uploader":
-				window.open(`/admin/users/${video.user?.id}`, "_blank");
-				break;
 			case "Delete Video":
 				setVideoToDelete(video);
 				setDeleteDialogOpen(true);
@@ -308,12 +305,7 @@ export default function AdminVideos() {
 		"Shortest First",
 	];
 
-	const actionOptions = [
-		"Watch Video",
-		"Edit Video",
-		"View Uploader",
-		"Delete Video",
-	];
+	const actionOptions = ["Watch Video", "Edit Video", "Delete Video"];
 
 	const handleStatusFilter = (status) => {
 		setStatusFilter(status);
@@ -577,7 +569,7 @@ export default function AdminVideos() {
 							variant="outline"
 							size="default"
 							icon="solar:sort-vertical-bold-duotone"
-							className="w-[120px] justify-between text-foreground hover:text-foreground hover:bg-accent"
+							className="w-[150px] justify-between text-foreground hover:text-foreground hover:bg-accent"
 						/>
 
 						{/* Refresh */}

@@ -55,33 +55,29 @@ export default function VideoDetailsPage() {
 	};
 
 	// Handle watchlist toggle
-	const handleWatchlistToggle = async () => {
-		if (!videoData?.id) return;
-
+	const handleWatchlistToggle = async (e) => {
 		setWatchlistLoading(true);
-		try {
-			if (isWatchlisted) {
-				const response = await removeFromWatchList(videoData.id);
-				if (response.success) {
-					setIsWatchlisted(false);
-					toast.success("Removed from watchlist");
-				} else {
-					toast.error("Failed to remove from watchlist");
-				}
-			} else {
-				const response = await addToWatchList(videoData.id);
-				if (response.success) {
-					setIsWatchlisted(true);
-					toast.success("Added to watchlist");
-				} else {
-					toast.error("Failed to add to watchlist");
-				}
-			}
-		} catch (error) {
-			toast.error("Something went wrong");
-		} finally {
-			setWatchlistLoading(false);
+		if (videoData.exists_in_watchlist) {
+			setIsWatchlisted(true);
 		}
+		if (isWatchlisted) {
+			const response = await removeFromWatchList(videoData.id);
+			if (response.success) {
+				setIsWatchlisted(false);
+				toast.success("Removed from watchlist");
+			} else {
+				toast.error("Failed to remove from watchlist");
+			}
+		} else {
+			const response = await addToWatchList(videoData.id);
+			if (response.success) {
+				setIsWatchlisted(true);
+				toast.success("Added to watchlist");
+			} else {
+				toast.error("Failed to add to watchlist");
+			}
+		}
+		setWatchlistLoading(false);
 	};
 
 	useEffect(() => {
@@ -124,11 +120,12 @@ export default function VideoDetailsPage() {
 					resolutions: videoInfo.resolutions || [],
 					quality: getQualityFromResolutions(videoInfo.resolutions),
 					slug: videoInfo.slug,
+					exists_in_watchlist: videoInfo.exists_in_watchlist || false,
 				};
 
 				setVideoData(transformedData);
 				// Check watchlist status after setting video data
-				await checkWatchlistStatus(transformedData.id);
+				setIsWatchlisted(videoInfo.exists_in_watchlist);
 			} catch (err) {
 				console.error("Error fetching video data:", err);
 				setError(
@@ -274,20 +271,24 @@ export default function VideoDetailsPage() {
 											variant="outline"
 											size="lg"
 											onClick={handleWatchlistToggle}
-											disabled={watchlistLoading}>
-											{watchlistLoading ? (
+											isLoading={watchlistLoading}
+											loadingText={
 												<Icon
 													icon="eos-icons:bubble-loading"
-													className="w-5 h-5"
+													width="2em"
+													height="2em"
+												/>
+											}>
+											{isWatchlisted ? (
+												<Icon
+													icon="solar:bookmark-bold"
+													className="w-4 h-4 sm:w-5 md:w-6 lg:w-7 md:h-6 lg:h-7"
 												/>
 											) : (
 												<Icon
-													icon={
-														isWatchlisted
-															? "solar:bookmark-bold"
-															: "solar:bookmark-linear"
-													}
-													className="w-5 h-5"
+													icon="hugeicons:bookmark-add-02"
+													width="2em"
+													height="2em"
 												/>
 											)}
 										</Button>

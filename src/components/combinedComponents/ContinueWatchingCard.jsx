@@ -98,12 +98,7 @@ const ContinueWatchingCard = ({ video, onClick, onRemoveFromHistory }) => {
 							className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${
 								isHovered ? "opacity-100" : "opacity-0"
 							}`}>
-							<div className="w-16 h-16 rounded-full bg-primary/90 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-lg">
-								<Icon
-									icon="solar:play-bold"
-									className="w-8 h-8 text-white ml-1"
-								/>
-							</div>
+							<Icon icon="solar:play-bold" className="w-8 h-8 text-primary" />
 						</div>
 
 						{/* Progress bar */}
@@ -115,7 +110,7 @@ const ContinueWatchingCard = ({ video, onClick, onRemoveFromHistory }) => {
 						</div>
 
 						{/* Content overlay - bottom section */}
-						<div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+						<div className="absolute bottom-0 left-0 right-0 p-4 text-white h-full flex flex-col justify-between">
 							{/* Title */}
 							<h2 className="text-lg font-bold mb-2 line-clamp-2 leading-tight drop-shadow-lg">
 								{video.title}
