@@ -55,11 +55,6 @@ export default function Navbar() {
 			icon: "material-symbols:movie-outline",
 		},
 		{
-			href: "/genres",
-			label: "Genres",
-			icon: "material-symbols:category-outline",
-		},
-		{
 			href: "/watchlist",
 			label: "My List",
 			icon: "material-symbols:bookmark-outline",
