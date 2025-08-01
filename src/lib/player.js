@@ -11,8 +11,8 @@ import BOLA from "./bola";
 import { getPlaceholderBuffer } from "./bola";
 import axios from "@/lib/axios";
 
-const BANDWIDTH_ALPHA = 0.5;
-const FILL_THRESHOLD_SECONDS = 50;
+const BANDWIDTH_ALPHA = 0.2;
+const FILL_THRESHOLD_SECONDS = 30;
 const WATCH_HISTORY_UPDATE_INTERVAL = 5000;
 
 function getBufferAhead(videoElement) {

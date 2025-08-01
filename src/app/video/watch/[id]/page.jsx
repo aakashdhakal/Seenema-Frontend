@@ -127,7 +127,7 @@ export default function VideoPage() {
 					videoId,
 					segmentList,
 					resolutionList,
-					videoData.duration + 8,
+					videoData.duration,
 					null,
 					timeToSeek,
 					resolution,

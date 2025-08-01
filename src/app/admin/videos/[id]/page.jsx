@@ -341,10 +341,10 @@ export default function VideoDetails() {
 			// Append text data
 			updateData.append("title", formData.title);
 			updateData.append("description", formData.description);
-			updateData.append("content_rating", formData.contentRating);
+			updateData.append("contentRating", formData.contentRating);
 			updateData.append("visibility", formData.visibility);
 			updateData.append("language", formData.language);
-			updateData.append("release_year", formData.releaseYear);
+			updateData.append("releaseYear", formData.releaseYear);
 			updateData.append("genres", JSON.stringify(formData.genres));
 			updateData.append("tags", JSON.stringify(formData.tags));
 			updateData.append("credits", JSON.stringify(formData.credits));
@@ -357,9 +357,13 @@ export default function VideoDetails() {
 				updateData.append("backdrop", formData.backdrop);
 			}
 
-			const response = await axios.post(`/updateVideo/${videoId}`, updateData, {
-				headers: { "Content-Type": "multipart/form-data" },
-			});
+			const response = await axios.post(
+				`/video/update/${videoId}`,
+				updateData,
+				{
+					headers: { "Content-Type": "multipart/form-data" },
+				},
+			);
 
 			// Update local video data
 			setVideo(response.data);
