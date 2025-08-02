@@ -156,11 +156,11 @@ export default function AdminNavbar() {
 					<Button
 						variant="ghost"
 						size="icon"
-						className="h-9 w-9 lg:flex items-center justify-center"
+						className="h-9 w-9 lg:flex items-center justify-center text-2xl"
 						onClick={() => {
 							setTheme(theme === "dark" ? "light" : "dark");
 						}}>
-						<Icon icon="solar:moon-bold-duotone" className="h-4 w-4" />
+						<Icon icon="ic:baseline-dark-mode" width="2em" height="2em" />
 						<span className="sr-only">Toggle Dark Mode</span>
 					</Button>
 

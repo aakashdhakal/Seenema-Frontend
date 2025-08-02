@@ -9,7 +9,7 @@ import {
 export default function CustomSelect({ label, options = [], ...rest }) {
 	return (
 		<Select {...rest}>
-			<SelectTrigger className="w-full overflow-hidden">
+			<SelectTrigger className="w-full overflow-hidden cursor-pointer hover:bg-secondary ">
 				{/* Added overflow-hidden */}
 				<SelectValue placeholder={label} />
 				{/* Added truncate */}

@@ -2,7 +2,7 @@ import { getSegmentSizes, getVideoSegment } from "./utils";
 
 // --- FIX: Set a realistic buffer capacity ---
 const REBUFFER_PENALTY = 10;
-const MAX_BUFFER_CAPACITY_SECONDS = 40; // Set to a reasonable value like 40 seconds
+const MAX_BUFFER_CAPACITY_SECONDS = 30; // Set to a reasonable value like 40 seconds
 
 function getCurrentBufferLevel(videoElement) {
 	if (

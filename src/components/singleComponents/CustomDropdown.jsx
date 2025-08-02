@@ -28,6 +28,12 @@ export default function CustomDropdown({
 		setIsOpen(false);
 	};
 
+	const capitalizeFirst = (text) => {
+		if (!text) return text;
+		if (typeof text !== "string") return text;
+		return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+	};
+
 	return (
 		<DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
 			<DropdownMenuTrigger asChild>
@@ -35,12 +41,14 @@ export default function CustomDropdown({
 					variant={variant}
 					size={size}
 					disabled={disabled}
-					className={`text-white hover:text-primary hover:bg-white/10 ${className}`}>
+					className={`text-white hover:text-foreground hover:bg-secondary ${className}`}>
 					{icon && <Icon icon={icon} className="mr-2 h-4 w-4" />}
-					<span className="text-sm">{selectedOption || placeholder}</span>
+					<span className="text-sm">
+						{capitalizeFirst(selectedOption) || placeholder}
+					</span>
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent className="bg-card border-border min-w-[120px] w-[--radix-dropdown-menu-trigger-width]">
+			<DropdownMenuContent className="bg-card border-border min-w-[120px]  ">
 				{options.map((option, index) => (
 					<DropdownMenuItem
 						key={`${option}-${index}`}
@@ -50,7 +58,7 @@ export default function CustomDropdown({
 								? "bg-accent text-accent-foreground"
 								: ""
 						}`}>
-						<span className="text-sm">{option}</span>
+						<span className="text-sm">{capitalizeFirst(option)}</span>
 						{selectedOption === option && (
 							<Icon
 								icon="solar:check-bold"

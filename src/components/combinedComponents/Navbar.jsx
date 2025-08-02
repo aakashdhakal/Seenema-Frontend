@@ -161,15 +161,18 @@ export default function Navbar() {
 						) : (
 							<DropdownMenu modal={false}>
 								<DropdownMenuTrigger asChild>
-									<Button
-										variant="ghost"
-										className="relative h-8 w-8 rounded-full p-0 hover:bg-accent/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-										<UserAvatar
-											src={user.profile_picture}
-											fallback={user.name?.charAt(0).toUpperCase() || "U"}
-											className="h-8 w-8"
-										/>
-									</Button>
+									{loading ? (
+										<Skeleton className="h-8 w-8 rounded-full" />
+									) : (
+										<Button
+											variant="ghost"
+											className="relative h-8 w-8 rounded-full p-0 hover:bg-accent/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+											<UserAvatar
+												src={user.profile_picture}
+												className="h-8 w-8"
+											/>
+										</Button>
+									)}
 								</DropdownMenuTrigger>
 								<DropdownMenuContent
 									className="w-40 mt-2 ml-2"
@@ -201,15 +204,6 @@ export default function Navbar() {
 												className="mr-2 h-4 w-4"
 											/>
 											<span>Profile</span>
-										</Link>
-									</DropdownMenuItem>
-									<DropdownMenuItem asChild>
-										<Link href="/settings" className="cursor-pointer">
-											<Icon
-												icon="material-symbols:settings-outline"
-												className="mr-2 h-4 w-4"
-											/>
-											<span>Settings</span>
 										</Link>
 									</DropdownMenuItem>
 
@@ -307,16 +301,7 @@ export default function Navbar() {
 									/>
 									<span className="text-base font-medium">Profile</span>
 								</Link>
-								<Link
-									href="/settings"
-									className="flex items-center space-x-3 px-3 py-3 rounded-lg text-foreground/70 hover:text-foreground hover:bg-accent/50 transition-all duration-200"
-									onClick={() => setIsMobileMenuOpen(false)}>
-									<Icon
-										icon="material-symbols:settings-outline"
-										className="w-5 h-5"
-									/>
-									<span className="text-base font-medium">Settings</span>
-								</Link>
+
 								<Button
 									variant="ghost"
 									onClick={handleLogout}

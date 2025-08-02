@@ -283,17 +283,14 @@ export default function MoviesPage() {
 
 	return (
 		<div className="min-h-screen bg-background">
-			<Navbar />
-
 			{/* Header Section */}
 			<section className="pt-24 sm:pt-28 md:pt-32 pb-8 sm:pb-12 px-4 sm:px-6">
 				<div className="container mx-auto">
 					<div className="flex items-center gap-4 mb-2">
 						<Icon
-							icon="solar:videocamera-record-bold-duotone"
+							icon="material-symbols-light:movie"
 							width="3em"
 							height="3em"
-							className="text-primary"
 						/>
 						<h1 className="text-2xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">
 							Movies
@@ -308,14 +305,14 @@ export default function MoviesPage() {
 			{/* Filters Section */}
 			<section className="px-4 sm:px-6 pb-6">
 				<div className="container mx-auto">
-					<Card>
+					<Card className="bg-transparent  border-0 shadow-none">
 						<CardContent className="p-4 sm:p-6">
 							<div className="flex flex-col lg:flex-row gap-4">
 								{/* Search */}
 								<div className="flex-1">
 									<div className="relative">
 										<Icon
-											icon="solar:magnifer-bold-duotone"
+											icon="ic:round-search"
 											className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
 										/>
 										<Input

@@ -39,7 +39,7 @@ export default function RootLayout({ children }) {
 					}}>
 					<AuthProvider>
 						{children}
-						<Toaster />
+						<Toaster expand={true} />
 					</AuthProvider>
 				</SWRConfig>
 			</body>

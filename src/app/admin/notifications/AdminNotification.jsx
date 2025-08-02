@@ -187,7 +187,11 @@ export default function AdminNotification() {
 					<Card>
 						<CardHeader>
 							<CardTitle className="flex items-center gap-2">
-								<Icon icon="solar:document-bold-duotone" className="h-5 w-5" />
+								<Icon
+									icon="mdi:newspaper-variant"
+									width="1.5em"
+									height="1.5em"
+								/>
 								Quick Templates
 							</CardTitle>
 						</CardHeader>
@@ -250,35 +254,6 @@ export default function AdminNotification() {
 								/>
 							</div>
 
-							{/* Preview */}
-							<div>
-								<label className="block text-sm font-medium mb-2">
-									Preview
-								</label>
-								<div className="border rounded-lg p-4 bg-muted/30">
-									<div className="flex items-start gap-3">
-										<div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center shrink-0">
-											<Icon
-												icon="solar:bell-bold"
-												className="h-4 w-4 text-primary-foreground"
-											/>
-										</div>
-										<div className="flex-1 min-w-0">
-											<p className="font-semibold text-sm">
-												{title || "Notification Title"}
-											</p>
-											<p className="text-sm text-muted-foreground mt-1">
-												{message ||
-													"Your notification message will appear here..."}
-											</p>
-											<p className="text-xs text-muted-foreground mt-2">
-												Just now
-											</p>
-										</div>
-									</div>
-								</div>
-							</div>
-
 							{/* Send Button */}
 							<Button
 								onClick={handleSend}
@@ -290,11 +265,8 @@ export default function AdminNotification() {
 									!message.trim() ||
 									(sendTo === "specific" && selectedUsers.length === 0)
 								}>
-								<Icon
-									icon="solar:send-square-bold-duotone"
-									className="h-4 w-4 mr-2"
-								/>
-								Send to {getRecipientCount()}{" "}
+								<Icon icon="fluent:send-32-filled" width="2em" height="2em" />
+								Notify to {getRecipientCount()}{" "}
 								{getRecipientCount() === 1 ? "user" : "users"}
 							</Button>
 						</CardContent>
@@ -328,7 +300,7 @@ export default function AdminNotification() {
 										/>
 										<div className="text-left">
 											<div className="font-medium">All Users</div>
-											<div className="text-xs text-muted-foreground">
+											<div className="text-xs">
 												Send to all {users.length} users
 											</div>
 										</div>
@@ -343,9 +315,7 @@ export default function AdminNotification() {
 										<Icon icon="solar:shield-user-bold" className="h-5 w-5" />
 										<div className="text-left">
 											<div className="font-medium">By Role</div>
-											<div className="text-xs text-muted-foreground">
-												Send to users by their role
-											</div>
+											<div className="text-xs">Send to users by their role</div>
 										</div>
 									</div>
 								</Button>
@@ -358,7 +328,7 @@ export default function AdminNotification() {
 										<Icon icon="solar:user-check-bold" className="h-5 w-5" />
 										<div className="text-left">
 											<div className="font-medium">Select Specific Users</div>
-											<div className="text-xs text-muted-foreground">
+											<div className="text-xs">
 												Choose individual users ({selectedUsers.length}{" "}
 												selected)
 											</div>
