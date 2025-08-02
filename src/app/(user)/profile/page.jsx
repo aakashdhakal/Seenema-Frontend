@@ -17,6 +17,7 @@ import { DatePicker } from "@/components/combinedComponents/DatePicker";
 import { toast } from "sonner";
 import axios from "@/lib/axios";
 import Image from "next/image";
+import CustomSelect from "@/components/singleComponents/CustomSelect";
 
 export default function ProfilePage() {
 	const { user, isLoading, mutate } = useAuthContext();
@@ -369,15 +370,18 @@ export default function ProfilePage() {
 												<Label htmlFor="gender" className="text-sm font-medium">
 													Gender
 												</Label>
-												<CustomDropdown
-													options={genderOptions}
-													selectedOption={profileData.gender}
-													onSelect={(value) =>
+												<CustomSelect
+													label="Select Gender"
+													options={[
+														{ value: "male", label: "Male" },
+														{ value: "female", label: "Female" },
+														{ value: "other", label: "Other" },
+													]}
+													value={profileData.gender}
+													onValueChange={(value) =>
 														handleInputChange("gender", value)
 													}
-													placeholder="Select gender"
-													className="w-full justify-start h-10"
-													variant="outline"
+													className="p-4"
 												/>
 											</div>
 											<div className="space-y-2">
