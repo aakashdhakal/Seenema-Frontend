@@ -19,48 +19,76 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { formatDuration } from "@/lib/utils";
 import axios from "@/lib/axios";
+import { parseVTT } from "@/lib/helper";
+import { set } from "date-fns";
 
 export default function VideoPage() {
+	// ============================================================================
+	// REFS AND ROUTER SETUP
+	// ============================================================================
 	const videoRef = useRef(null);
+	const controlsTimeout = useRef(null);
+	const wasPlayingRef = useRef(false);
+
 	const params = useParams();
 	const { id: videoId } = params;
 	const searchParams = useSearchParams();
 	const router = useRouter();
 
-	// State for video data and streaming
+	// ============================================================================
+	// STATE MANAGEMENT
+	// ============================================================================
+
+	// Video Data and Streaming States
 	const [videoData, setVideoData] = useState({});
 	const [resolutionList, setResolutionList] = useState([]);
 	const [resolution, setResolution] = useState("Auto");
 	const [segmentList, setSegmentList] = useState([]);
 	const [initialSeekTime, setInitialSeekTime] = useState(0);
 
-	// Video control states
+	// Video Control States
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [isMuted, setIsMuted] = useState(true);
 	const [volume, setVolume] = useState(100);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [duration, setDuration] = useState(0);
+	const [playbackRate, setPlaybackRate] = useState(1);
+	const [isLoading, setIsLoading] = useState(true);
+
+	// UI States
+	const [isFullscreen, setIsFullscreen] = useState(false);
+	const [showControls, setShowControls] = useState(true);
+
+	// Buffer Information
 	const [bufferInfo, setBufferInfo] = useState({
 		bufferedTime: 0,
 		bufferedPercentage: 0,
 	});
-	const [isFullscreen, setIsFullscreen] = useState(false);
-	const [showControls, setShowControls] = useState(true);
-	const [playbackRate, setPlaybackRate] = useState(1);
-	const [isLoading, setIsLoading] = useState(true);
 
-	const controlsTimeout = useRef(null);
-	const wasPlayingRef = useRef(false);
+	// Subtitle States
+	const [subtitles, setSubtitles] = useState([]);
+	const [showCaptions, setShowCaptions] = useState(true);
 
-	// Effect to fetch initial video metadata and manifest
+	// ============================================================================
+	// INITIALIZATION EFFECTS
+	// ============================================================================
+
+	/**
+	 * Effect to fetch initial video metadata and main manifest
+	 * Runs when videoId changes or component mounts
+	 */
 	useEffect(() => {
 		if (!videoId) return;
 
+		// Parse start time from URL parameters
 		const startTime = parseFloat(searchParams.get("t"));
 		if (!isNaN(startTime) && startTime > 0) {
 			setInitialSeekTime(startTime);
 		}
 
+		/**
+		 * Fetch video metadata and set document title
+		 */
 		const fetchVideoData = async () => {
 			try {
 				const video = await getVideoData(videoId);
@@ -72,6 +100,9 @@ export default function VideoPage() {
 			}
 		};
 
+		/**
+		 * Fetch main manifest and extract available resolutions
+		 */
 		const fetchMainManifest = async () => {
 			try {
 				const manifest = await getMainManifest(videoId);
@@ -87,9 +118,13 @@ export default function VideoPage() {
 		fetchMainManifest();
 	}, [videoId, searchParams]);
 
-	// Effect to fetch segment list for timing info
+	/**
+	 * Effect to fetch segment list for timing information
+	 * Uses 144p manifest for segment timing data
+	 */
 	useEffect(() => {
 		if (!videoId) return;
+
 		const fetchSegmentList = async () => {
 			try {
 				const manifest = await getManifestByResolution(videoId, "144p");
@@ -101,12 +136,17 @@ export default function VideoPage() {
 				console.error("Error fetching segment list:", err);
 			}
 		};
+
 		fetchSegmentList();
 	}, [videoId]);
 
-	// Effect to initialize or re-initialize the video stream
+	/**
+	 * Effect to initialize or re-initialize the video stream
+	 * Runs when video data, segments, or resolution changes
+	 */
 	useEffect(() => {
 		let stream;
+
 		if (
 			videoRef.current &&
 			segmentList.length > 0 &&
@@ -114,15 +154,18 @@ export default function VideoPage() {
 			videoData?.duration
 		) {
 			const startStream = async () => {
+				// Store current playing state
 				wasPlayingRef.current = videoRef.current && !videoRef.current.paused;
 				setIsLoading(true);
 
+				// Determine seek time (current position or initial seek time)
 				const timeToSeek =
 					videoRef.current.currentTime > 0 &&
 					!isNaN(videoRef.current.currentTime)
 						? videoRef.current.currentTime
 						: initialSeekTime;
 
+				// Initialize the video stream
 				stream = await initializeVideoStream(
 					videoRef.current,
 					videoId,
@@ -136,9 +179,11 @@ export default function VideoPage() {
 					console.error("Error initializing video stream:", err);
 				});
 			};
+
 			startStream();
 		}
 
+		// Cleanup function
 		return () => {
 			if (stream && stream.destroy) {
 				stream.destroy();
@@ -153,9 +198,78 @@ export default function VideoPage() {
 		initialSeekTime,
 	]);
 
-	// Effect for keyboard shortcuts
+	// ============================================================================
+	// SUBTITLE HANDLING
+	// ============================================================================
+
+	/**
+	 * Effect to fetch and parse subtitle files
+	 */
+	useEffect(() => {
+		const fetchAndParseSubtitles = async () => {
+			try {
+				const response = await axios.get("/video/subtitles/" + videoId, {
+					responseType: "text",
+				});
+				if (response.status === 200) {
+					const text = response.data;
+					const cues = parseVTT(text);
+					setSubtitles(cues);
+				}
+			} catch (error) {
+				setSubtitles([]);
+			}
+		};
+
+		fetchAndParseSubtitles();
+	}, [videoId]);
+
+	/**
+	 * Effect to apply subtitles to video element with time adjustment
+	 * Adds 8-second delay to account for intro duration
+	 */
+	useEffect(() => {
+		if (videoRef.current && subtitles.length > 0) {
+			const video = videoRef.current;
+			const INTRO_DURATION = 8; // 8-second intro offset
+
+			// Clear existing subtitle tracks
+			Array.from(video.textTracks).forEach((track) => {
+				if (track.kind === "subtitles") track.mode = "disabled";
+			});
+
+			// Create new subtitle track
+			const track = video.addTextTrack("subtitles", "Delayed Subtitles", "en");
+			track.mode = showCaptions ? "showing" : "hidden";
+
+			// Add cues with time adjustment for intro
+			subtitles.forEach((cue) => {
+				const adjustedStart = Math.max(0, cue.startTime + INTRO_DURATION);
+				const adjustedEnd = cue.endTime + INTRO_DURATION;
+
+				// Skip invalid cues where start equals end
+				if (adjustedStart !== adjustedEnd) {
+					track.addCue(new VTTCue(adjustedStart, adjustedEnd, cue.text));
+				}
+			});
+
+			// Cleanup function
+			return () => {
+				track.mode = "disabled";
+			};
+		}
+	}, [subtitles, showCaptions, videoRef.current]);
+
+	// ============================================================================
+	// KEYBOARD SHORTCUTS
+	// ============================================================================
+
+	/**
+	 * Effect for keyboard shortcuts and hotkeys
+	 */
 	useEffect(() => {
 		const handleKeyDown = (e) => {
+			// Skip if user is typing in input fields
 			if (
 				document.activeElement.tagName === "INPUT" ||
 				document.activeElement.tagName === "TEXTAREA" ||
@@ -163,40 +277,45 @@ export default function VideoPage() {
 			) {
 				return;
 			}
+
 			switch (e.key.toLowerCase()) {
-				case " ":
-				case "k":
+				case " ": // Spacebar
+				case "k": // K key
 					e.preventDefault();
 					togglePlayPause();
 					break;
-				case "m":
+				case "m": // Mute toggle
 					toggleMute();
 					break;
-				case "arrowright":
+				case "arrowright": // Skip forward 5s
 					skipTime(5);
 					break;
-				case "arrowleft":
+				case "arrowleft": // Skip backward 5s
 					skipTime(-5);
 					break;
-				case "arrowup":
+				case "arrowup": // Volume up
 					handleVolumeChange([Math.min(volume + 10, 100)]);
 					break;
-				case "arrowdown":
+				case "arrowdown": // Volume down
 					handleVolumeChange([Math.max(volume - 10, 0)]);
 					break;
-				case "f":
+				case "f": // Fullscreen toggle
 					toggleFullscreen();
 					break;
-				case ">":
+				case "c": // Captions toggle
+					toggleCaptions();
+					break;
+				case ">": // Increase playback speed
 					handlePlaybackRateChange(Math.min(playbackRate + 0.25, 2));
 					break;
-				case "<":
+				case "<": // Decrease playback speed
 					handlePlaybackRateChange(Math.max(playbackRate - 0.25, 0.25));
 					break;
 				default:
 					break;
 			}
 		};
+
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [
@@ -207,16 +326,27 @@ export default function VideoPage() {
 		showControls,
 		resolution,
 		currentTime,
+		showCaptions,
 	]);
 
+	// ============================================================================
+	// UTILITY FUNCTIONS
+	// ============================================================================
+
+	/**
+	 * Calculate and update buffer information
+	 */
 	const updateBufferInfo = () => {
 		const video = videoRef.current;
 		if (!video || !video.buffered || !video.buffered.length || !duration) {
 			setBufferInfo({ bufferedTime: 0, bufferedPercentage: 0 });
 			return;
 		}
+
 		let maxBufferedEnd = 0;
 		const currentTime = video.currentTime;
+
+		// Find the buffered range that contains current time
 		for (let i = 0; i < video.buffered.length; i++) {
 			if (
 				currentTime >= video.buffered.start(i) &&
@@ -226,15 +356,44 @@ export default function VideoPage() {
 				break;
 			}
 		}
+
 		const bufferedTime = Math.max(0, maxBufferedEnd - currentTime);
 		const bufferedPercentage = Math.min(
 			((currentTime + bufferedTime) / duration) * 100,
 			100,
 		);
+
 		setBufferInfo({ bufferedTime, bufferedPercentage });
 	};
 
-	// Control functions
+	/**
+	 * Format time in MM:SS format
+	 */
+	const formatTime = (time) => {
+		if (isNaN(time)) return "0:00";
+		const minutes = Math.floor(time / 60);
+		const seconds = Math.floor(time % 60);
+		return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+	};
+
+	/**
+	 * Reset controls visibility timeout
+	 */
+	const resetControlsTimeout = () => {
+		setShowControls(true);
+		if (controlsTimeout.current) clearTimeout(controlsTimeout.current);
+		controlsTimeout.current = setTimeout(() => {
+			if (isPlaying) setShowControls(false);
+		}, 5000);
+	};
+
+	// ============================================================================
+	// CONTROL FUNCTIONS
+	// ============================================================================
+
+	/**
+	 * Toggle play/pause state
+	 */
 	const togglePlayPause = () => {
 		const video = videoRef.current;
 		if (!video) return;
@@ -242,12 +401,18 @@ export default function VideoPage() {
 		else video.play();
 	};
 
+	/**
+	 * Toggle mute state
+	 */
 	const toggleMute = () => {
 		const video = videoRef.current;
 		if (!video) return;
 		video.muted = !video.muted;
 	};
 
+	/**
+	 * Handle volume changes from slider
+	 */
 	const handleVolumeChange = (newVolume) => {
 		const video = videoRef.current;
 		if (!video) return;
@@ -257,6 +422,9 @@ export default function VideoPage() {
 		if (volumeValue > 0 && isMuted) video.muted = false;
 	};
 
+	/**
+	 * Handle seeking from slider
+	 */
 	const handleSeek = (newTime) => {
 		const video = videoRef.current;
 		if (!video) return;
@@ -267,7 +435,9 @@ export default function VideoPage() {
 		resetControlsTimeout();
 	};
 
-	// Custom seekbar click handler
+	/**
+	 * Handle seekbar click for direct seeking
+	 */
 	const handleSeekbarClick = (e) => {
 		const video = videoRef.current;
 		if (!video || !duration) return;
@@ -282,6 +452,9 @@ export default function VideoPage() {
 		resetControlsTimeout();
 	};
 
+	/**
+	 * Toggle fullscreen mode
+	 */
 	const toggleFullscreen = () => {
 		if (!document.fullscreenElement) {
 			document.documentElement
@@ -292,6 +465,9 @@ export default function VideoPage() {
 		}
 	};
 
+	/**
+	 * Skip time by specified seconds
+	 */
 	const skipTime = (seconds) => {
 		const video = videoRef.current;
 		if (!video) return;
@@ -301,6 +477,9 @@ export default function VideoPage() {
 		);
 	};
 
+	/**
+	 * Change playback rate
+	 */
 	const handlePlaybackRateChange = (rate) => {
 		const video = videoRef.current;
 		if (!video) return;
@@ -308,33 +487,44 @@ export default function VideoPage() {
 		setPlaybackRate(rate);
 	};
 
-	const resetControlsTimeout = () => {
-		setShowControls(true);
-		if (controlsTimeout.current) clearTimeout(controlsTimeout.current);
-		controlsTimeout.current = setTimeout(() => {
-			if (isPlaying) setShowControls(false);
-		}, 5000);
+	/**
+	 * Toggle captions visibility
+	 */
+	const toggleCaptions = () => {
+		setShowCaptions((prev) => {
+			const newState = !prev;
+			// Update existing text tracks
+			if (videoRef.current) {
+				Array.from(videoRef.current.textTracks).forEach((track) => {
+					if (track.kind === "subtitles") {
+						track.mode = newState ? "showing" : "hidden";
+					}
+				});
+			}
+			return newState;
+		});
 	};
 
-	const formatTime = (time) => {
-		if (isNaN(time)) return "0:00";
-		const minutes = Math.floor(time / 60);
-		const seconds = Math.floor(time % 60);
-		return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-	};
+	// ============================================================================
+	// CALCULATED VALUES
+	// ============================================================================
 
 	const progressPercentage = duration
 		? Math.min((currentTime / duration) * 100, 100)
 		: 0;
 
-	const [subtitleUrl, setSubtitleUrl] = useState(null);
+	// ============================================================================
+	// COMPONENT RENDER
+	// ============================================================================
 
 	return (
 		<div
 			className="fixed inset-0 w-screen h-screen bg-black"
 			onMouseMove={resetControlsTimeout}
 			onMouseLeave={() => isPlaying && setShowControls(false)}>
-			{/* Video Element */}
+			{/* ============================================================================ */}
+			{/* VIDEO ELEMENT */}
+			{/* ============================================================================ */}
 			<video
 				ref={videoRef}
 				id="video"
@@ -378,16 +568,12 @@ export default function VideoPage() {
 					updateWatchHistory(videoId, currentTime);
 					router.push(`/video/${videoData.slug}`);
 				}}
-				poster={videoData.backdrop_path || ""}>
-				<track
-					label="English"
-					kind="subtitles"
-					src="https://seenemaapi.aakashdhakal.com.np/storage/subtitles/eng.vtt"
-					default
-				/>
-			</video>
+				poster={videoData.backdrop_path || ""}
+			/>
 
-			{/* Loading State */}
+			{/* ============================================================================ */}
+			{/* LOADING STATE */}
+			{/* ============================================================================ */}
 			{isLoading && (
 				<div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
 					<div className="animate-pulse">
@@ -402,7 +588,9 @@ export default function VideoPage() {
 				</div>
 			)}
 
-			{/* Play/Pause Center Button */}
+			{/* ============================================================================ */}
+			{/* PLAY/PAUSE CENTER BUTTON */}
+			{/* ============================================================================ */}
 			<div
 				className="absolute inset-0 flex items-center justify-center cursor-pointer"
 				onClick={togglePlayPause}>
@@ -416,7 +604,9 @@ export default function VideoPage() {
 				)}
 			</div>
 
-			{/* Video Controls */}
+			{/* ============================================================================ */}
+			{/* VIDEO CONTROLS */}
+			{/* ============================================================================ */}
 			<div
 				className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent transition-all duration-300 ${
 					showControls
@@ -443,7 +633,6 @@ export default function VideoPage() {
 								style={{ width: `${Math.min(progressPercentage, 100)}%` }}
 							/>
 						</div>
-
 						{/* Invisible clickable area for better touch targets */}
 						<div className="absolute inset-0 z-10" />
 					</div>
@@ -453,6 +642,7 @@ export default function VideoPage() {
 				<div className="flex items-center justify-between px-2 xs:px-3 sm:px-4 pb-2 xs:pb-3 sm:pb-4 gap-1 xs:gap-2">
 					{/* Left Controls */}
 					<div className="flex items-center gap-1 xs:gap-2 sm:gap-3 flex-1 min-w-0">
+						{/* Play/Pause Button */}
 						<Button
 							variant="ghost"
 							size="sm"
@@ -464,7 +654,7 @@ export default function VideoPage() {
 							/>
 						</Button>
 
-						{/* Skip buttons - Hidden on very small screens */}
+						{/* Skip Buttons - Hidden on very small screens */}
 						<Button
 							variant="ghost"
 							size="sm"
@@ -529,6 +719,27 @@ export default function VideoPage() {
 
 					{/* Right Controls */}
 					<div className="flex items-center gap-1 xs:gap-2 sm:gap-3 shrink-0">
+						{/* Captions Toggle Button */}
+						{subtitles.length > 0 && (
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={toggleCaptions}
+								className={`text-white hover:text-primary hover:bg-white/20 p-1 xs:p-1.5 sm:p-2 ${
+									showCaptions ? "text-primary" : ""
+								}`}
+								title="Toggle Captions (C)">
+								<Icon
+									icon={
+										showCaptions
+											? "solar:subtitles-bold"
+											: "solar:subtitles-outline"
+									}
+									className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6"
+								/>
+							</Button>
+						)}
+
 						{/* Playback Rate - Hidden on small screens */}
 						<div className="hidden lg:block">
 							<CustomDropdown
@@ -558,7 +769,7 @@ export default function VideoPage() {
 							<Icon icon="solar:pip-bold" className="w-4 h-4 sm:w-5 sm:h-5" />
 						</Button>
 
-						{/* Fullscreen */}
+						{/* Fullscreen Button */}
 						<Button
 							variant="ghost"
 							size="sm"
@@ -577,7 +788,9 @@ export default function VideoPage() {
 				</div>
 			</div>
 
-			{/* Video Title */}
+			{/* ============================================================================ */}
+			{/* VIDEO TITLE OVERLAY */}
+			{/* ============================================================================ */}
 			{videoData.title && showControls && (
 				<div className="absolute top-2 xs:top-3 sm:top-4 left-2 xs:left-3 sm:left-4 right-2 xs:right-3 sm:right-4 pointer-events-none z-10">
 					<div className="bg-black/40 backdrop-blur-sm rounded-lg p-2 xs:p-3 sm:p-4 max-w-max overflow-hidden">
@@ -593,20 +806,22 @@ export default function VideoPage() {
 				</div>
 			)}
 
-			{/* Mobile Touch Zones for Skip */}
+			{/* ============================================================================ */}
+			{/* MOBILE TOUCH ZONES FOR SKIP */}
+			{/* ============================================================================ */}
 			<div className="block sm:hidden">
-				{/* Left skip zone */}
+				{/* Left skip zone - Double tap to skip backward */}
 				<div
 					className="absolute left-0 top-0 w-1/3 h-full flex items-center justify-start pl-4"
 					onDoubleClick={() => skipTime(-10)}>
-					{/* Visual feedback could go here */}
+					{/* Visual feedback could be added here */}
 				</div>
 
-				{/* Right skip zone */}
+				{/* Right skip zone - Double tap to skip forward */}
 				<div
 					className="absolute right-0 top-0 w-1/3 h-full flex items-center justify-end pr-4"
 					onDoubleClick={() => skipTime(10)}>
-					{/* Visual feedback could go here */}
+					{/* Visual feedback could be added here */}
 				</div>
 			</div>
 		</div>

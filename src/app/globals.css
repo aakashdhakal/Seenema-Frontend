@@ -202,6 +202,23 @@
       color 0.2s ease-in-out,
       opacity 0.2s ease-in-out;
   }
+
+  ::cue {
+    color: hsl(var(--foreground));
+    background-color: hsl(var(--muted));
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+    font-family: var(--font-sans);
+    font-size: 2rem;
+    font-weight: 400;
+    line-height: 1;
+    text-align: center;
+
+    /* Ensure good contrast for subtitles */
+    color: hsl(var(--foreground)) !important;
+    background-color: hsl(var(--muted)) !important;
+    text-shadow: 0 0 4px rgba(0, 0,
+        0, 0.9) !important;
+  }
 }
 
 /* Enhanced button styles with proper contrast */

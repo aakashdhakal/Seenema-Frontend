@@ -171,3 +171,35 @@ export const removeFromContinueWatching = async (id) => {
 		throw error;
 	}
 };
+
+export function parseVTT(vttText) {
+	const cues = [];
+	const lines = vttText.split("\n");
+
+	let currentCue = null;
+
+	lines.forEach((line) => {
+		// Skip metadata and empty lines
+		if (line.includes("-->")) {
+			const [start, end] = line.split(" --> ");
+			currentCue = {
+				startTime: parseTime(start),
+				endTime: parseTime(end),
+				text: "",
+			};
+		} else if (currentCue && line.trim()) {
+			currentCue.text += line + "\n";
+		} else if (!line.trim() && currentCue) {
+			cues.push(currentCue);
+			currentCue = null;
+		}
+	});
+
+	return cues;
+}
+
+export function parseTime(timeString) {
+	const [hms, ms] = timeString.split(".");
+	const [h, m, s] = hms.split(":");
+	return +h * 3600 + +m * 60 + +s + +ms / 1000;
+}
