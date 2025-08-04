@@ -382,7 +382,7 @@ export default function VideoPage() {
 				<track
 					label="English"
 					kind="subtitles"
-					src="http://localhost:8000/storage/subtitles/eng.vtt"
+					src="https://seenemaapi.aakashdhakal.com.np/storage/subtitles/eng.vtt"
 					default
 				/>
 			</video>
