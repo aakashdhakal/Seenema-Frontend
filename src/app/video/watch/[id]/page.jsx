@@ -18,6 +18,7 @@ import { useSearchParams, useParams } from "next/navigation";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { formatDuration } from "@/lib/utils";
+import axios from "@/lib/axios";
 
 export default function VideoPage() {
 	const videoRef = useRef(null);
@@ -326,6 +327,8 @@ export default function VideoPage() {
 		? Math.min((currentTime / duration) * 100, 100)
 		: 0;
 
+	const [subtitleUrl, setSubtitleUrl] = useState(null);
+
 	return (
 		<div
 			className="fixed inset-0 w-screen h-screen bg-black"
@@ -375,8 +378,14 @@ export default function VideoPage() {
 					updateWatchHistory(videoId, currentTime);
 					router.push(`/video/${videoData.slug}`);
 				}}
-				poster={videoData.backdrop_path || ""}
-			/>
+				poster={videoData.backdrop_path || ""}>
+				<track
+					label="English"
+					kind="subtitles"
+					src="http://localhost:8000/storage/subtitles/eng.vtt"
+					default
+				/>
+			</video>
 
 			{/* Loading State */}
 			{isLoading && (
