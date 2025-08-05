@@ -723,19 +723,17 @@ export default function VideoPage() {
 						{subtitles.length > 0 && (
 							<Button
 								variant="ghost"
-								size="sm"
+								size="icon"
 								onClick={toggleCaptions}
-								className={`text-white hover:text-primary hover:bg-white/20 p-1 xs:p-1.5 sm:p-2 ${
-									showCaptions ? "text-primary" : ""
-								}`}
 								title="Toggle Captions (C)">
 								<Icon
 									icon={
 										showCaptions
-											? "solar:subtitles-bold"
-											: "solar:subtitles-outline"
+											? "material-symbols:subtitles-outline-rounded"
+											: "material-symbols:subtitles-off-outline-rounded"
 									}
-									className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6"
+									width="6em"
+									height="6em"
 								/>
 							</Button>
 						)}
