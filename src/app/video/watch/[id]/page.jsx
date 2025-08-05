@@ -580,6 +580,7 @@ export default function VideoPage() {
 						<Image
 							src={"/4.png"}
 							alt="Loading"
+							priority
 							width={100}
 							height={100}
 							className="w-12 h-12 xs:w-16 xs:h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain opacity-80"

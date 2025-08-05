@@ -13,19 +13,15 @@ import axios from "@/lib/axios";
 
 const BANDWIDTH_ALPHA = 0.2;
 const FILL_THRESHOLD_SECONDS = 30;
-const MIN_BUFFER_AHEAD = 5;
 const WATCH_HISTORY_UPDATE_INTERVAL = 5000;
 
 function getBufferAhead(videoElement) {
 	const currentTime = videoElement.currentTime;
 	const buffered = videoElement.buffered;
 	if (buffered.length === 0) return 0;
-
 	for (let i = 0; i < buffered.length; i++) {
-		const start = buffered.start(i);
-		const end = buffered.end(i);
-		if (start <= currentTime && end > currentTime) {
-			return end - currentTime;
+		if (buffered.start(i) <= currentTime && buffered.end(i) >= currentTime) {
+			return buffered.end(i) - currentTime;
 		}
 	}
 	return 0;
@@ -68,21 +64,19 @@ export async function initializeVideoStream(
 			const sourceBuffer = mediaSource.addSourceBuffer(
 				'video/mp4; codecs="avc1.42E01E, mp4a.40.2"',
 			);
+
 			mediaSource.duration = videoDuration;
 
-			// Initial resolution and placeholder buffer info
 			const initialPlaceholder = await getPlaceholderBuffer(
 				videoId,
 				resolutionList,
 				segmentList,
 			);
 			const startupRes = initialPlaceholder.startupResolution;
-			let lastBandwidth = initialPlaceholder.startupBandwidth || null;
+			const lastBandwidth = initialPlaceholder.startupBandwidth || null;
 
-			// Play intro only once globally for this playback
 			await playIntro(sourceBuffer, startupRes);
 
-			// Start main playback after intro
 			destroyPlayback = await startMainPlayback(
 				sourceBuffer,
 				videoElement,
@@ -119,17 +113,12 @@ export async function initializeVideoStream(
 	};
 }
 
-let introAppended = false;
-
 async function playIntro(sourceBuffer, resolution) {
-	if (introAppended) return; // Play intro only once per player lifecycle
-
 	const introInit = await getIntroInit(resolution);
 	const introManifestText = await getIntroManifest(resolution);
 	const introSegments = parseManifest(introManifestText);
 
 	await waitForUpdateEnd(sourceBuffer);
-	sourceBuffer.timestampOffset = 0;
 	sourceBuffer.appendBuffer(introInit);
 	await waitForUpdateEnd(sourceBuffer);
 
@@ -141,8 +130,6 @@ async function playIntro(sourceBuffer, resolution) {
 			await waitForUpdateEnd(sourceBuffer);
 		}
 	}
-
-	introAppended = true;
 }
 
 async function startMainPlayback(
@@ -166,7 +153,6 @@ async function startMainPlayback(
 	let currentPlaceholder = initialPlaceholder;
 	let isDestroyed = false;
 	let appendTimeout = null;
-	let isWaiting = false;
 
 	const introManifestText = await getIntroManifest(startupRes);
 	const introSegments = parseManifest(introManifestText);
@@ -177,7 +163,6 @@ async function startMainPlayback(
 	const totalDuration = segmentList.reduce((acc, seg) => acc + seg.duration, 0);
 	const typicalSegmentDuration = segmentList[0]?.duration || 5;
 
-	// Start watch history
 	const startWatchHistory = () => {
 		if (isDestroyed) return;
 		clearInterval(watchHistoryInterval);
@@ -190,20 +175,11 @@ async function startMainPlayback(
 			}
 		}, WATCH_HISTORY_UPDATE_INTERVAL);
 	};
+
 	const stopWatchHistory = () => clearInterval(watchHistoryInterval);
 
-	const handleWaiting = () => {
-		if (isDestroyed || isSeeking) return;
-		console.log("📺 Video is waiting for data, triggering buffer fill");
-		isWaiting = true;
-		clearTimeout(appendTimeout);
-		appendNextSegment();
-	};
-	const handlePlaying = () => {
-		if (isWaiting) {
-			console.log("▶️ Video resumed playing");
-			isWaiting = false;
-		}
+	const unmuteOnPlay = () => {
+		if (videoElement.volume > 0) videoElement.muted = false;
 	};
 
 	async function appendNextSegment() {
@@ -223,30 +199,48 @@ async function startMainPlayback(
 		}
 
 		const bufferAhead = getBufferAhead(videoElement);
-		if (bufferAhead >= FILL_THRESHOLD_SECONDS && !isWaiting) {
+		if (bufferAhead >= FILL_THRESHOLD_SECONDS) {
 			appendTimeout = setTimeout(appendNextSegment, 500);
 			return;
 		}
 
 		try {
 			const segment = segmentList[segmentIndex];
-			let selectedResolution =
-				manualResolution === "Auto"
-					? await BOLA(
-							videoId,
-							videoElement,
-							segment,
-							resolutionList,
-							totalDuration,
-							lastSelectedResolution,
-							lastBandwidth,
-							currentPlaceholder,
-							typicalSegmentDuration,
-					  )
-					: manualResolution;
+			const previousResolution = lastSelectedResolution;
+			let selectedResolution;
+
+			if (manualResolution === "Auto") {
+				selectedResolution = await BOLA(
+					videoId,
+					videoElement,
+					segment,
+					resolutionList,
+					totalDuration,
+					lastSelectedResolution,
+					lastBandwidth,
+					currentPlaceholder,
+					typicalSegmentDuration,
+				);
+			} else {
+				selectedResolution = manualResolution;
+			}
 
 			if (selectedResolution !== lastSelectedResolution) {
-				// Append init segment on resolution change to avoid artifacts
+				const currentSegmentTime = segmentList
+					.slice(0, segmentIndex)
+					.reduce((sum, seg) => sum + seg.duration, introDuration);
+
+				if (sourceBuffer.buffered.length > 0) {
+					const removeStart = currentSegmentTime + 0.1;
+					if (
+						sourceBuffer.buffered.end(sourceBuffer.buffered.length - 1) >
+						removeStart
+					) {
+						sourceBuffer.remove(removeStart, mediaSource.duration);
+						await waitForUpdateEnd(sourceBuffer);
+					}
+				}
+
 				const newInit = await getInitFile(videoId, selectedResolution);
 				await waitForUpdateEnd(sourceBuffer);
 				sourceBuffer.appendBuffer(newInit);
@@ -271,6 +265,7 @@ async function startMainPlayback(
 			const sizeMB = segmentData.byteLength / (1024 * 1024);
 			const downloadTime = Math.max((downloadEnd - downloadStart) / 1000, 0.05);
 			const measuredBandwidth = sizeMB / downloadTime;
+
 			lastBandwidth =
 				lastBandwidth == null
 					? measuredBandwidth
@@ -281,14 +276,8 @@ async function startMainPlayback(
 			sourceBuffer.appendBuffer(segmentData);
 			await waitForUpdateEnd(sourceBuffer);
 
-			console.log(
-				`✅ Appended segment ${segmentIndex}, res: ${lastSelectedResolution}, buffer: ${getBufferAhead(
-					videoElement,
-				)}s`,
-			);
-
 			segmentIndex++;
-			appendTimeout = setTimeout(appendNextSegment, isWaiting ? 10 : 0);
+			appendNextSegment();
 		} catch (err) {
 			if (isDestroyed) return;
 			if (err.name === "QuotaExceededError") {
@@ -307,80 +296,70 @@ async function startMainPlayback(
 
 		const seekTime = videoElement.currentTime;
 		const buffered = videoElement.buffered;
-
-		// Check if seek position is already buffered (allow small margin)
 		for (let i = 0; i < buffered.length; i++) {
 			if (
 				seekTime >= buffered.start(i) + 0.1 &&
 				seekTime < buffered.end(i) - 0.1
 			) {
-				console.log(
-					"⏩ Seeked to already buffered segment, no re-fetch needed.",
-				);
-				return; // Skip re-fetch, playback will continue
+				return; // Already buffered, no need to seek
 			}
 		}
 
 		isSeeking = true;
-		isWaiting = false;
 		stopWatchHistory();
-		clearTimeout(appendTimeout);
-
-		// Remove only future buffer after seekTime, keep past buffer intact
-		const removeStart = seekTime;
-		const removeEnd = mediaSource.duration;
+		clearTimeout(appendTimeout); // Stop any pending appends
 
 		await waitForUpdateEnd(sourceBuffer);
 		sourceBuffer.abort();
 		await waitForUpdateEnd(sourceBuffer);
-		sourceBuffer.remove(removeStart, removeEnd);
+		sourceBuffer.remove(0, mediaSource.duration);
 		await waitForUpdateEnd(sourceBuffer);
 
-		// Reset timestamp offset for main video (no intro replay on seek)
+		// Re-append intro and set timestamp offset
+		sourceBuffer.timestampOffset = 0;
+		await playIntro(sourceBuffer, lastSelectedResolution);
 		sourceBuffer.timestampOffset = introDuration;
 
-		// Append init segment for new position
+		const targetTime = Math.max(0, seekTime - introDuration);
+		segmentIndex = findSegmentIndexForTime(targetTime, segmentList);
+
+		if (manualResolution === "Auto") {
+			const seekPlaceholder = await getPlaceholderBuffer(
+				videoId,
+				resolutionList,
+				segmentList,
+			);
+			currentPlaceholder = seekPlaceholder;
+			lastSelectedResolution = seekPlaceholder.startupResolution;
+			if (seekPlaceholder.startupBandwidth > 0.1)
+				lastBandwidth = seekPlaceholder.startupBandwidth;
+		} else {
+			lastSelectedResolution = manualResolution;
+		}
+
 		const initSeg = await getInitFile(videoId, lastSelectedResolution);
-		await waitForUpdateEnd(sourceBuffer);
 		sourceBuffer.appendBuffer(initSeg);
 		await waitForUpdateEnd(sourceBuffer);
 
-		// Find segment index for new seek position (adjusted for intro offset)
-		segmentIndex = findSegmentIndexForTime(
-			seekTime - introDuration,
-			segmentList,
-		);
-
-		appendNextSegment();
-
 		isSeeking = false;
 		startWatchHistory();
-	}
-
-	sourceBuffer.timestampOffset = introDuration;
-
-	// Append initial init segment after intro
-	const initSegment = await getInitFile(videoId, startupRes);
-	await waitForUpdateEnd(sourceBuffer);
-	sourceBuffer.appendBuffer(initSegment);
-	await waitForUpdateEnd(sourceBuffer);
-
-	// If startTime > 0, seek after intro duration
-	if (startTime > 0) {
-		videoElement.addEventListener("timeupdate", function jumpAfterIntro() {
-			if (videoElement.currentTime >= introDuration - 0.1) {
-				videoElement.currentTime = startTime + introDuration;
-				videoElement.removeEventListener("timeupdate", jumpAfterIntro);
-			}
-		});
+		appendNextSegment();
 	}
 
 	videoElement.addEventListener("play", startWatchHistory);
 	videoElement.addEventListener("pause", stopWatchHistory);
 	videoElement.addEventListener("ended", stopWatchHistory);
 	videoElement.addEventListener("seeking", handleSeek);
-	videoElement.addEventListener("waiting", handleWaiting);
-	videoElement.addEventListener("playing", handlePlaying);
+	videoElement.addEventListener("play", unmuteOnPlay, { once: true });
+
+	sourceBuffer.timestampOffset = introDuration;
+	const initSegment = await getInitFile(videoId, startupRes);
+	sourceBuffer.appendBuffer(initSegment);
+	await waitForUpdateEnd(sourceBuffer);
+
+	if (startTime > 0 && videoElement) {
+		videoElement.currentTime = startTime + introDuration;
+	}
 
 	appendNextSegment();
 
@@ -392,8 +371,7 @@ async function startMainPlayback(
 		videoElement.removeEventListener("pause", stopWatchHistory);
 		videoElement.removeEventListener("ended", stopWatchHistory);
 		videoElement.removeEventListener("seeking", handleSeek);
-		videoElement.removeEventListener("waiting", handleWaiting);
-		videoElement.removeEventListener("playing", handlePlaying);
+		videoElement.removeEventListener("play", unmuteOnPlay);
 	};
 }
 
