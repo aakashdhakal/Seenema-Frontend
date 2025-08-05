@@ -229,47 +229,45 @@ export default function VideoPage() {
 	 * Adds 8-second delay to account for intro duration
 	 */
 	useEffect(() => {
-		if (videoRef.current && subtitles.length > 0) {
-			const video = videoRef.current;
-			const INTRO_DURATION = 8;
+		if (!videoRef.current || subtitles.length === 0) return;
 
-			// Disable all subtitle tracks
-			Array.from(video.textTracks).forEach((track) => {
-				if (track.kind === "subtitles") track.mode = "disabled";
-			});
+		const video = videoRef.current;
+		const INTRO_DURATION = 8;
 
-			// Remove all cues from existing tracks
-			Array.from(video.textTracks).forEach((track) => {
-				if (track.kind === "subtitles") {
-					while (track.cues && track.cues.length > 0) {
-						track.removeCue(track.cues[0]);
-					}
+		//Remove all existing cues from the track
+		Array.from(video.textTracks).forEach((track) => {
+			if (track.kind === "subtitles") {
+				track.mode = "disabled"; // Disable existing tracks
+				while (track.cues && track.cues.length > 0) {
+					track.removeCue(track.cues[0]); // Remove all cues
 				}
-			});
-
-			// Create new subtitle track only if none exists
-			let track = Array.from(video.textTracks).find(
-				(t) => t.label === "Delayed Subtitles",
-			);
-			if (!track) {
-				track = video.addTextTrack("subtitles", "Delayed Subtitles", "en");
 			}
-			track.mode = showCaptions ? "showing" : "hidden";
+		});
 
-			// Add cues
-			subtitles.forEach((cue) => {
-				const adjustedStart = Math.max(0, cue.startTime + INTRO_DURATION);
-				const adjustedEnd = cue.endTime + INTRO_DURATION;
-				if (adjustedStart !== adjustedEnd) {
-					track.addCue(new VTTCue(adjustedStart, adjustedEnd, cue.text));
-				}
-			});
+		// Remove all <track> elements too to prevent stacking
+		Array.from(video.querySelectorAll("track")).forEach((el) => el.remove());
 
-			return () => {
-				track.mode = "disabled";
-			};
-		}
-	}, [subtitles, showCaptions, videoRef.current]);
+		// Create one subtitle track
+		const track = video.addTextTrack("subtitles", "Seenema Subtitles", "en");
+		track.mode = showCaptions ? "showing" : "hidden";
+
+		// Add adjusted cues
+		subtitles.forEach((cue) => {
+			const adjustedStart = Math.max(0, cue.startTime + INTRO_DURATION);
+			const adjustedEnd = cue.endTime + INTRO_DURATION;
+			if (adjustedStart !== adjustedEnd) {
+				track.addCue(new VTTCue(adjustedStart, adjustedEnd, cue.text));
+			}
+		});
+
+		// Cleanup
+		return () => {
+			track.mode = "disabled";
+			while (track.cues && track.cues.length > 0) {
+				track.removeCue(track.cues[0]);
+			}
+		};
+	}, [subtitles, showCaptions, videoId, resolution]); // ✅ run fresh on video change only
 
 	// ============================================================================
 	// KEYBOARD SHORTCUTS
