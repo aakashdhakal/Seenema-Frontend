@@ -231,29 +231,40 @@ export default function VideoPage() {
 	useEffect(() => {
 		if (videoRef.current && subtitles.length > 0) {
 			const video = videoRef.current;
-			const INTRO_DURATION = 8; // 8-second intro offset
+			const INTRO_DURATION = 8;
 
-			// Clear existing subtitle tracks
+			// Disable all subtitle tracks
 			Array.from(video.textTracks).forEach((track) => {
 				if (track.kind === "subtitles") track.mode = "disabled";
 			});
 
-			// Create new subtitle track
-			const track = video.addTextTrack("subtitles", "Delayed Subtitles", "en");
+			// Remove all cues from existing tracks
+			Array.from(video.textTracks).forEach((track) => {
+				if (track.kind === "subtitles") {
+					while (track.cues && track.cues.length > 0) {
+						track.removeCue(track.cues[0]);
+					}
+				}
+			});
+
+			// Create new subtitle track only if none exists
+			let track = Array.from(video.textTracks).find(
+				(t) => t.label === "Delayed Subtitles",
+			);
+			if (!track) {
+				track = video.addTextTrack("subtitles", "Delayed Subtitles", "en");
+			}
 			track.mode = showCaptions ? "showing" : "hidden";
 
-			// Add cues with time adjustment for intro
+			// Add cues
 			subtitles.forEach((cue) => {
 				const adjustedStart = Math.max(0, cue.startTime + INTRO_DURATION);
 				const adjustedEnd = cue.endTime + INTRO_DURATION;
-
-				// Skip invalid cues where start equals end
 				if (adjustedStart !== adjustedEnd) {
 					track.addCue(new VTTCue(adjustedStart, adjustedEnd, cue.text));
 				}
 			});
 
-			// Cleanup function
 			return () => {
 				track.mode = "disabled";
 			};
