@@ -65,7 +65,7 @@ export default function AdminNotification() {
 		try {
 			setLoadingUsers(true);
 			const response = await axios.get("/users");
-			setUsers(response.data.users || []);
+			setUsers(response.data || []);
 		} catch (error) {
 			console.error("Error fetching users:", error);
 			toast.error("Failed to fetch users");
