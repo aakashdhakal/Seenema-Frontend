@@ -48,7 +48,7 @@ export default function CustomDropdown({
 					</span>
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent className="bg-card border-border min-w-[120px]  ">
+			<DropdownMenuContent className="bg-card border-border min-w-[120px] w-[var(--radix-dropdown-menu-trigger-width)]  ">
 				{options.map((option, index) => (
 					<DropdownMenuItem
 						key={`${option}-${index}`}

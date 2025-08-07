@@ -22,7 +22,7 @@ function getCurrentBufferLevel(videoElement) {
 			return videoElement.buffered.end(i) - currentTime;
 		}
 	}
-	return 0; // Return 0 if currentTime is not in any buffered range
+	return 0;
 }
 
 export default async function BOLA(
@@ -33,7 +33,7 @@ export default async function BOLA(
 	totalDuration,
 	lastSelectedResolution = null,
 	lastBandwidth = null,
-	placeHolderBuffer, // This is now the full object { buffer: seconds }
+	placeHolderBuffer,
 	typicalSegmentDuration,
 ) {
 	const currentTime = videoElement.currentTime;
@@ -62,9 +62,6 @@ export default async function BOLA(
 	const U_max = Math.max(...U_m);
 	const V_D = (QD_max - 1) / (U_max + REBUFFER_PENALTY);
 
-	// --- FIX: Use live buffer after the first segment ---
-	// The placeholder is only valid for the very first segment decision.
-	// After that, we must use the actual measured buffer.
 	const bufferInSeconds =
 		segment.name === "segment_000.m4s" && placeHolderBuffer
 			? placeHolderBuffer.buffer
@@ -92,7 +89,6 @@ export default async function BOLA(
 	}
 	let m_star = resolutionList[bestResIndex];
 
-	// (The rest of the BOLA logic for oscillation control remains the same)
 	if (
 		lastSelectedResolution !== null &&
 		resolutionList.indexOf(m_star) <
@@ -138,7 +134,6 @@ export default async function BOLA(
 		}
 	}
 
-	// Logging for debug purposes
 	const logData = {
 		"Buffer Level (s)": bufferInSeconds,
 		"QD_max (segments)": QD_max,

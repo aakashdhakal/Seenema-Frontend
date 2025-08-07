@@ -180,10 +180,7 @@ export default function AdminNavbar() {
 								/>
 							</Button>
 						</DropdownMenuTrigger>
-						<DropdownMenuContent
-							className="w-40 mt-2 ml-2"
-							align="end"
-							forceMount>
+						<DropdownMenuContent className="w-40 mt-3" align="end" forceMount>
 							<DropdownMenuLabel className="font-normal">
 								<div className="flex flex-col space-y-1 justify-center">
 									<p className="text-sm font-medium leading-none text-center">
@@ -210,15 +207,6 @@ export default function AdminNavbar() {
 										className="mr-2 h-4 w-4"
 									/>
 									<span>Profile</span>
-								</Link>
-							</DropdownMenuItem>
-							<DropdownMenuItem asChild>
-								<Link href="/settings" className="cursor-pointer">
-									<Icon
-										icon="material-symbols:settings-outline"
-										className="mr-2 h-4 w-4"
-									/>
-									<span>Settings</span>
 								</Link>
 							</DropdownMenuItem>
 
