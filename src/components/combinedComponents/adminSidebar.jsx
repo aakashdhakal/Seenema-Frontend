@@ -25,35 +25,22 @@ const navigationItems = [
 	{
 		title: "Dashboard",
 		url: "/admin/dashboard",
-		icon: "solar:widget-2-bold-duotone",
+		icon: "streamline-ultimate:layout-dashboard-bold",
 	},
 	{
 		title: "Videos",
 		url: "/admin/videos",
-		icon: "solar:video-frame-bold-duotone",
+		icon: "fa6-solid:film",
 	},
 	{
 		title: "Users",
 		url: "/admin/users",
-		icon: "solar:users-group-two-rounded-bold-duotone",
+		icon: "fa:users",
 	},
 	{
 		title: "Notifications",
 		url: "/admin/notifications",
 		icon: "lets-icons:bell-fill",
-	},
-];
-
-const settingsItems = [
-	{
-		title: "Settings",
-		url: "/admin/settings",
-		icon: "solar:settings-bold-duotone",
-	},
-	{
-		title: "Help & Support",
-		url: "/admin/support",
-		icon: "solar:question-circle-bold-duotone",
 	},
 ];
 
@@ -125,28 +112,6 @@ export default function AdminSidebar() {
 				<div className="px-3">
 					<Separator className="bg-sidebar-border" />
 				</div>
-
-				{/* Settings Section */}
-				<SidebarGroup className="px-3 py-4">
-					<SidebarGroupContent>
-						<SidebarMenu className="space-y-1">
-							{settingsItems.map((item) => (
-								<SidebarMenuItem key={item.title}>
-									<SidebarMenuButton
-										asChild
-										isActive={isActiveItem(item.url)}
-										size="lg"
-										className="w-full justify-start h-11 px-3 rounded-lg transition-all duration-200 hover:bg-sidebar-accent data-[active=true]:bg-primary data-[active=true]:text-primary-foreground font-medium text-sidebar-foreground/80 hover:text-sidebar-foreground">
-										<Link href={item.url}>
-											<Icon icon={item.icon} className="h-5 w-5 shrink-0" />
-											<span className="ml-3">{item.title}</span>
-										</Link>
-									</SidebarMenuButton>
-								</SidebarMenuItem>
-							))}
-						</SidebarMenu>
-					</SidebarGroupContent>
-				</SidebarGroup>
 			</SidebarContent>
 
 			<SidebarRail />

@@ -398,10 +398,7 @@ export default function AdminVideos() {
 				</div>
 				<Button asChild>
 					<Link href="/admin/videos/upload">
-						<Icon
-							icon="solar:add-circle-bold-duotone"
-							className="mr-2 h-4 w-4"
-						/>
+						<Icon icon="ion:cloud-upload" width="3em" height="3em" />
 						Upload Video
 					</Link>
 				</Button>
@@ -412,10 +409,7 @@ export default function AdminVideos() {
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium">Total Videos</CardTitle>
-						<Icon
-							icon="solar:videocamera-record-bold-duotone"
-							className="h-4 w-4 text-muted-foreground"
-						/>
+						<Icon icon="majesticons:video" width="1.5em" height="1.5em" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold">{videoStats.total}</div>
@@ -429,8 +423,9 @@ export default function AdminVideos() {
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium">Ready</CardTitle>
 						<Icon
-							icon="solar:check-circle-bold-duotone"
-							className="h-4 w-4 text-green-600"
+							icon="lets-icons:check-round-fill"
+							width="1.8em"
+							height="1.8em"
 						/>
 					</CardHeader>
 					<CardContent>
@@ -442,10 +437,7 @@ export default function AdminVideos() {
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium">Processing</CardTitle>
-						<Icon
-							icon="solar:refresh-bold-duotone"
-							className="h-4 w-4 text-blue-600"
-						/>
+						<Icon icon="mdi:folder-refresh" width="1.5em" height="1.5em" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold">{videoStats.processing}</div>
@@ -457,8 +449,9 @@ export default function AdminVideos() {
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium">Failed</CardTitle>
 						<Icon
-							icon="solar:close-circle-bold-duotone"
-							className="h-4 w-4 text-red-600"
+							icon="icon-park-outline:link-cloud-faild"
+							width="1.7em"
+							height="1.7em"
 						/>
 					</CardHeader>
 					<CardContent>
@@ -472,10 +465,7 @@ export default function AdminVideos() {
 						<CardTitle className="text-sm font-medium">
 							Total Duration
 						</CardTitle>
-						<Icon
-							icon="solar:clock-circle-bold-duotone"
-							className="h-4 w-4 text-purple-600"
-						/>
+						<Icon icon="weui:time-filled" width="1.5em" height="1.5em" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold">
@@ -498,7 +488,7 @@ export default function AdminVideos() {
 						<div className="flex-1 border-2 rounded-md">
 							<div className="relative">
 								<Icon
-									icon="solar:magnifer-bold-duotone"
+									icon="ri:search-line"
 									className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
 								/>
 								<Input
@@ -522,7 +512,7 @@ export default function AdminVideos() {
 							}
 							variant="outline"
 							size="default"
-							icon="solar:filter-bold-duotone"
+							icon="iconoir:filter-solid"
 							className="w-[140px] justify-between text-foreground hover:text-foreground hover:bg-accent"
 						/>
 
@@ -544,7 +534,7 @@ export default function AdminVideos() {
 							}
 							variant="outline"
 							size="default"
-							icon="solar:tag-bold-duotone"
+							icon="mdi:tag"
 							className="w-[140px] justify-between text-foreground hover:text-foreground hover:bg-accent"
 						/>
 
@@ -568,13 +558,13 @@ export default function AdminVideos() {
 							placeholder="Sort"
 							variant="outline"
 							size="default"
-							icon="solar:sort-vertical-bold-duotone"
+							icon="mi:sort"
 							className="w-[150px] justify-between text-foreground hover:text-foreground hover:bg-accent"
 						/>
 
 						{/* Refresh */}
 						<Button variant="outline" onClick={fetchData}>
-							<Icon icon="solar:refresh-bold-duotone" className="h-4 w-4" />
+							<Icon icon="fa7-solid:refresh" width="1.8em" height="1.8em" />{" "}
 						</Button>
 					</div>
 
