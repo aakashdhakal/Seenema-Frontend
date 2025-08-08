@@ -53,6 +53,7 @@ export default function NotFound() {
 				{/* Quick links */}
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-md mx-auto">
 					<Link
+						rel="preload"
 						href="/movies"
 						className="flex flex-col items-center p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors duration-200 group">
 						<Icon
@@ -65,6 +66,7 @@ export default function NotFound() {
 					</Link>
 
 					<Link
+						rel="preload"
 						href="/series"
 						className="flex flex-col items-center p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors duration-200 group">
 						<Icon
@@ -75,6 +77,7 @@ export default function NotFound() {
 					</Link>
 
 					<Link
+						rel="preload"
 						href="/video/trending"
 						className="flex flex-col items-center p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors duration-200 group">
 						<Icon
@@ -85,6 +88,7 @@ export default function NotFound() {
 					</Link>
 
 					<Link
+						rel="preload"
 						href="/search"
 						className="flex flex-col items-center p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors duration-200 group">
 						<Icon

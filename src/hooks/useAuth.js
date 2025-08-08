@@ -18,10 +18,7 @@ export const useAuth = () => {
 		error,
 		isLoading,
 		mutate,
-	} = useSWR("/auth/user", fetcher, {
-		revalidateOnFocus: false, // don't re-fetch on focus
-		revalidateOnReconnect: true, // don't re-fetch on reconnect
-	});
+	} = useSWR("/auth/user", fetcher);
 
 	const login = async ({ email, password }) => {
 		await getCSRFToken(); // this triggers Laravel to send back CSRF token in cookie

@@ -34,8 +34,13 @@ export default function RootLayout({ children }) {
 					value={{
 						revalidateOnFocus: false,
 						revalidateOnReconnect: false,
-						dedupingInterval: 300000, // 5 minutes
-						focusThrottleInterval: 3600000, // 1 hour
+						refreshWhenHidden: false, // Disable revalidation when the tab is hidden
+						refreshWhenOffline: false, // Disable revalidation when offline
+						revalidateIfStale: false, // Disable revalidation if the data is stale
+						dedupingInterval: 60000, // 1 minute
+						refreshInterval: 0, // Disable automatic revalidation
+						focusThrottleInterval: 0, // Disable focus revalidation
+						errorRetryCount: 0, // Retry failed requests up to 3 times
 					}}>
 					<AuthProvider>
 						{children}

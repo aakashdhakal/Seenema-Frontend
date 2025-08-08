@@ -186,6 +186,7 @@ export default function VerifyEmailPage() {
 							<p className="text-sm text-gray-400">
 								Already verified?{"  "}
 								<Link
+									rel="preload"
 									href="/login"
 									className="text-primary  font-medium transition-colors">
 									Sign in here

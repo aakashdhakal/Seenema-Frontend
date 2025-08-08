@@ -10,11 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Icon } from "@iconify/react";
 import axios from "@/lib/axios";
 import VideoRow from "@/components/combinedComponents/VideoRow";
-import {
-	checkIfVideoInWatchList,
-	addToWatchList,
-	removeFromWatchList,
-} from "@/lib/helper";
+import { addToWatchList, removeFromWatchList } from "@/lib/helper";
 import { toast } from "sonner";
 import echo from "@/lib/echo"; // Import your Echo instance
 

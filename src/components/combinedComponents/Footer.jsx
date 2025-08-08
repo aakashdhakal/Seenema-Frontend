@@ -58,7 +58,10 @@ export default function Footer() {
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
 					{/* Brand Section */}
 					<div className="lg:col-span-2">
-						<Link href="/home" className="flex items-center gap-3 mb-6">
+						<Link
+							rel="preload"
+							href="/home"
+							className="flex items-center gap-3 mb-6">
 							<Image
 								src="/4.png"
 								alt="Seenema Logo"
@@ -80,6 +83,7 @@ export default function Footer() {
 						<div className="flex gap-4">
 							{socialLinks.map((social, index) => (
 								<Link
+									rel="preload"
 									key={index}
 									href={social.href}
 									target="_blank"
@@ -103,6 +107,7 @@ export default function Footer() {
 								{footerLinks.explore.map((link, index) => (
 									<li key={index}>
 										<Link
+											rel="preload"
 											href={link.href}
 											className="text-muted-foreground hover:text-primary transition-colors duration-200">
 											{link.name}
@@ -121,6 +126,7 @@ export default function Footer() {
 								{footerLinks.support.map((link, index) => (
 									<li key={index}>
 										<Link
+											rel="preload"
 											href={link.href}
 											className="text-muted-foreground hover:text-primary transition-colors duration-200">
 											{link.name}
@@ -139,6 +145,7 @@ export default function Footer() {
 								{footerLinks.legal.map((link, index) => (
 									<li key={index}>
 										<Link
+											rel="preload"
 											href={link.href}
 											className="text-muted-foreground hover:text-primary transition-colors duration-200">
 											{link.name}
@@ -166,6 +173,7 @@ export default function Footer() {
 						<div className="flex items-center gap-2">
 							<Icon icon="solar:help-bold" className="w-4 h-4" />
 							<Link
+								rel="preload"
 								href="/help"
 								className="hover:text-primary transition-colors">
 								Help

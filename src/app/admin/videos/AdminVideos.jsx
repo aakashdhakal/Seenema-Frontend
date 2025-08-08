@@ -397,7 +397,7 @@ export default function AdminVideos() {
 					)}
 				</div>
 				<Button asChild>
-					<Link href="/admin/videos/upload">
+					<Link rel="preload" href="/admin/videos/upload">
 						<Icon icon="ion:cloud-upload" width="3em" height="3em" />
 						Upload Video
 					</Link>
@@ -690,7 +690,7 @@ export default function AdminVideos() {
 													statusFilter === "all" &&
 													genreFilter === "all" && (
 														<Button asChild className="mt-2">
-															<Link href="/admin/videos/upload">
+															<Link rel="preload" href="/admin/videos/upload">
 																<Icon
 																	icon="solar:add-circle-bold-duotone"
 																	className="mr-2 h-4 w-4"

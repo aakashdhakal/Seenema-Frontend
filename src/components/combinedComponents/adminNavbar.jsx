@@ -191,7 +191,7 @@ export default function AdminNavbar() {
 							<DropdownMenuSeparator />
 							{user.role === "admin" && (
 								<DropdownMenuItem asChild>
-									<Link href="/admin" className="cursor-pointer">
+									<Link rel="preload" href="/admin" className="cursor-pointer">
 										<Icon
 											icon="material-symbols:admin-panel-settings"
 											className="mr-2 h-4 w-4"
@@ -201,7 +201,7 @@ export default function AdminNavbar() {
 								</DropdownMenuItem>
 							)}
 							<DropdownMenuItem asChild>
-								<Link href="/profile" className="cursor-pointer">
+								<Link rel="preload" href="/profile" className="cursor-pointer">
 									<Icon
 										icon="material-symbols:person-outline"
 										className="mr-2 h-4 w-4"

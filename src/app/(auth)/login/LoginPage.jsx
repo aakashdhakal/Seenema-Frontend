@@ -228,7 +228,9 @@ export default function LoginPage() {
 										variant="link"
 										className="p-0 h-auto text-sm text-primary hover:text-primary/80"
 										asChild>
-										<Link href="/">Forgot password?</Link>
+										<Link rel="preload" href="/forgot-password">
+											Forgot password?
+										</Link>
 									</Button>
 								</div>
 
@@ -259,7 +261,9 @@ export default function LoginPage() {
 							variant="outline"
 							className="w-full h-10 bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20 transition-all"
 							asChild>
-							<Link href={backendUrl + "/api/auth/google/redirect"}>
+							<Link
+								rel="preload"
+								href={backendUrl + "/api/auth/google/redirect"}>
 								<Icon icon="logos:google-icon" className="w-5 h-5 mr-3" />
 								Continue with Google
 							</Link>
@@ -272,6 +276,7 @@ export default function LoginPage() {
 						<p className="text-center text-gray-300">
 							Don't have an account?{"  "}
 							<Link
+								rel="preload"
 								href="/signup"
 								className="text-primary hover:text-primary/80 font-semibold transition-colors">
 								Register
@@ -285,12 +290,14 @@ export default function LoginPage() {
 					<p className="text-xs text-gray-400">
 						By signing in, you agree to our{" "}
 						<Link
+							rel="preload"
 							href="/"
 							className="text-primary hover:text-primary/80 transition-colors">
 							Terms of Service
 						</Link>{" "}
 						and{" "}
 						<Link
+							rel="preload"
 							href="/"
 							className="text-primary hover:text-primary/80 transition-colors">
 							Privacy Policy

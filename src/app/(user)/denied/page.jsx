@@ -49,7 +49,7 @@ export default function AccessDenied() {
 								Go Back
 							</Button>
 							<Button variant="outline" asChild className="w-full">
-								<Link href="/">
+								<Link rel="preload" href="/">
 									<Icon icon="solar:home-2-bold" className="h-4 w-4 mr-2" />
 									Return to Home
 								</Link>
@@ -59,12 +59,14 @@ export default function AccessDenied() {
 						<div className="pt-4 border-t">
 							<div className="flex items-center justify-center space-x-4 text-xs text-muted-foreground">
 								<Link
+									rel="preload"
 									href="/contact"
 									className="hover:text-foreground transition-colors">
 									Contact Support
 								</Link>
 								<span>•</span>
 								<Link
+									rel="preload"
 									href="/login"
 									className="hover:text-foreground transition-colors">
 									Sign In

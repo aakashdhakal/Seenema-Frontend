@@ -98,7 +98,7 @@ export default function AdminSidebar() {
 										isActive={isActiveItem(item.url)}
 										size="lg"
 										className="w-full justify-start h-11 px-3 rounded-lg transition-all duration-200 hover:bg-sidebar-accent data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:shadow-sm font-medium">
-										<Link href={item.url}>
+										<Link rel="preload" href={item.url}>
 											<Icon icon={item.icon} className="h-5 w-5 shrink-0" />
 											<span className="ml-3">{item.title}</span>
 										</Link>

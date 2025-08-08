@@ -497,6 +497,7 @@ export default function SignupPage() {
 						<p className="text-center text-gray-300">
 							Already have an account?{"  "}
 							<Link
+								rel="preload"
 								href="/login"
 								className="text-primary hover:text-primary/80 font-semibold transition-colors">
 								Login

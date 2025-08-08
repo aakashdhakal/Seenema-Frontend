@@ -1,4 +1,3 @@
-import { Metadata } from "next";
 import AdminDashboard from "./AdminHome";
 
 export const metadata = {
