@@ -4,7 +4,6 @@ import { useAuthContext } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import PageLoadingComponent from "@/components/combinedComponents/PageLoadingComponent";
-import Navbar from "@/components/combinedComponents/Navbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@iconify/react";
@@ -12,30 +11,33 @@ import axios from "@/lib/axios";
 import VideoRow from "@/components/combinedComponents/VideoRow";
 import { addToWatchList, removeFromWatchList } from "@/lib/helper";
 import { toast } from "sonner";
-import echo from "@/lib/echo"; // Import your Echo instance
+import echo from "@/lib/echo";
 
 export default function HomePage() {
+	// ===== AUTH & ROUTING STATE =====
 	const { user, isLoading } = useAuthContext();
 	const router = useRouter();
+
+	// ===== COMPONENT STATE =====
 	const [userData, setUserData] = useState(null);
 	const [mounted, setMounted] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [addWatchListLoading, setAddWatchListLoading] = useState(false);
-	const [isWatchlisted, setIsWatchlisted] = useState(false);
 	const [error, setError] = useState(null);
-	// State for connection status
-	const [connectionStatus, setConnectionStatus] = useState("disconnected");
 
-	// State for each section
-	const [featuredVideo, setFeaturedVideo] = useState(null);
-	const [trendingVideos, setTrendingVideos] = useState([]);
-	const [popularVideos, setPopularVideos] = useState([]);
-	const [newReleases, setNewReleases] = useState([]);
-	const [actionVideos, setActionVideos] = useState([]);
-	const [continueWatching, setContinueWatching] = useState([]);
-	const [recommended, setRecommended] = useState([]);
+	// ===== HOME DATA STATE (from single API call) =====
+	const [homeData, setHomeData] = useState({
+		featured: null,
+		trending: [],
+		popular: [],
+		newReleases: [],
+		action: [],
+		continueWatching: [],
+		recommended: [],
+	});
 
-	// Helper function to format duration
+	// ===== UTILITY FUNCTIONS =====
+
 	const formatDuration = (seconds) => {
 		if (!seconds) return "Unknown";
 		const hours = Math.floor(seconds / 3600);
@@ -46,7 +48,6 @@ export default function HomePage() {
 		return `${minutes}m`;
 	};
 
-	// Helper function to format time remaining
 	const formatTimeRemaining = (seconds) => {
 		if (!seconds) return "Finished";
 		const hours = Math.floor(seconds / 3600);
@@ -58,53 +59,131 @@ export default function HomePage() {
 		return `${minutes}m left`;
 	};
 
-	// Handle continue watching removal
+	const transformVideoData = (video) => ({
+		id: video.id,
+		title: video.title,
+		poster: video.thumbnail_path,
+		slug: video.slug,
+		rating: video.rating || 0,
+		year: video.release_year,
+		duration: formatDuration(video.duration),
+		resolutions: video.resolutions || [],
+		exists_in_watchlist: video.exists_in_watchlist || false,
+	});
+
+	const transformContinueWatchingData = (record) => {
+		const video = record.video;
+		const progress = Math.min(
+			(record.watched_duration / video.duration) * 100,
+			100,
+		);
+		const remainingSeconds = Math.max(
+			video.duration - record.watched_duration,
+			0,
+		);
+
+		return {
+			id: video.id,
+			title: video.title,
+			backdrop: video.backdrop_path,
+			slug: video.slug,
+			description: video.description,
+			progress: Math.round(progress),
+			timeLeft: formatTimeRemaining(remainingSeconds),
+			lastWatched: record.finished_at || record.updated_at,
+			currentTime: record.watched_duration,
+			totalDuration: video.duration,
+			watchHistoryId: record.id,
+		};
+	};
+
+	const transformFeaturedData = (featured) => ({
+		id: featured.id,
+		title: featured.title,
+		description:
+			featured.description?.slice(0, 200) + "..." ||
+			"No description available...",
+		backdrop: featured.backdrop_path,
+		poster: featured.thumbnail_path,
+		rating: featured.rating || 0,
+		year: featured.release_year,
+		genre: featured.category || "Entertainment",
+		duration: formatDuration(featured.duration),
+		slug: featured.slug,
+		content_rating: featured.content_rating,
+		resolutions: featured.resolutions || [],
+		exists_in_watchlist: featured.exists_in_watchlist || false,
+	});
+
+	// ===== EVENT HANDLERS =====
+
+	const handleVideoClick = (video) => {
+		router.push(`/video/${video.slug}`);
+	};
+
+	const handleContinueWatchingClick = (video) => {
+		router.push(`/video/watch/${video.id}?t=${video.currentTime}`);
+	};
+
 	const handleRemoveFromContinueWatching = async (videoId) => {
-		setContinueWatching((prev) => prev.filter((video) => video.id !== videoId));
+		setHomeData((prev) => ({
+			...prev,
+			continueWatching: prev.continueWatching.filter(
+				(video) => video.id !== videoId,
+			),
+		}));
 	};
 
-	// Handle watchlist toggle
 	const handleWatchlistToggle = async (e) => {
+		e.preventDefault();
+		if (!homeData.featured) return;
+
 		setAddWatchListLoading(true);
-		if (featuredVideo.exists_in_watchlist) {
-			setIsWatchlisted(true);
-		}
-		if (isWatchlisted) {
-			const response = await removeFromWatchList(featuredVideo.id);
-			if (response.success) {
-				setIsWatchlisted(false);
-				toast.success("Removed from watchlist");
+		const isCurrentlyWatchlisted = homeData.featured.exists_in_watchlist;
+
+		try {
+			if (isCurrentlyWatchlisted) {
+				const response = await removeFromWatchList(homeData.featured.id);
+				if (response.success) {
+					setHomeData((prev) => ({
+						...prev,
+						featured: { ...prev.featured, exists_in_watchlist: false },
+					}));
+					toast.success("Removed from watchlist");
+				} else {
+					toast.error("Failed to remove from watchlist");
+				}
 			} else {
-				toast.error("Failed to remove from watchlist");
+				const response = await addToWatchList(homeData.featured.id);
+				if (response.success) {
+					setHomeData((prev) => ({
+						...prev,
+						featured: { ...prev.featured, exists_in_watchlist: true },
+					}));
+					toast.success("Added to watchlist");
+				} else {
+					toast.error("Failed to add to watchlist");
+				}
 			}
-		} else {
-			const response = await addToWatchList(featuredVideo.id);
-			if (response.success) {
-				setIsWatchlisted(true);
-				toast.success("Added to watchlist");
-			} else {
-				toast.error("Failed to add to watchlist");
-			}
+		} catch (error) {
+			toast.error("An error occurred. Please try again.");
+		} finally {
+			setAddWatchListLoading(false);
 		}
-		setAddWatchListLoading(false);
 	};
 
-	// Handle Video click
-	const handleVideoClick = (Video) => {
-		router.push(`/video/${Video.slug}`);
-	};
+	// ===== EFFECTS =====
 
-	// Handle continue watching click
-	const handleContinueWatchingClick = (Video) => {
-		router.push(`/video/watch/${Video.id}?t=${Video.currentTime}`);
-	};
-
-	// Handle hydration
+	/**
+	 * Handle component mounting for hydration
+	 */
 	useEffect(() => {
 		setMounted(true);
 	}, []);
 
-	// Set userData when user is available
+	/**
+	 * Set user data when user is available
+	 */
 	useEffect(() => {
 		if (user) {
 			setUserData({
@@ -115,14 +194,16 @@ export default function HomePage() {
 		}
 	}, [user]);
 
-	// Setup Laravel Reverb notifications
+	/**
+	 * Setup Laravel Echo for real-time notifications
+	 */
 	useEffect(() => {
 		if (!user?.id) return;
 
 		const channel = echo
 			.private("user." + user.id)
 			.listen(".notification", (e) => {
-				console.log(e);
+				console.log("Received notification:", e);
 			});
 
 		return () => {
@@ -130,7 +211,9 @@ export default function HomePage() {
 		};
 	}, [user?.id]);
 
-	// Redirect to login if not authenticated
+	/**
+	 * Handle authentication and email verification redirects
+	 */
 	useEffect(() => {
 		if (user && !user.is_email_verified) {
 			router.replace("/verifyEmail");
@@ -142,8 +225,10 @@ export default function HomePage() {
 		}
 	}, [user, isLoading, router]);
 
-	// Fetch home data
-	// Fetch home data
+	/**
+	 * Fetch all home page data in a single API call
+	 * This is the main optimization - reduces from 7 API calls to 1
+	 */
 	useEffect(() => {
 		const fetchHomeData = async () => {
 			if (!user) return;
@@ -152,148 +237,22 @@ export default function HomePage() {
 				setLoading(true);
 				setError(null);
 
-				// Fetch all APIs in parallel instead of sequentially
-				const [
-					featuredResponse,
-					trendingResponse,
-					popularResponse,
-					newReleasesResponse,
-					actionResponse,
-					continueWatchingResponse,
-					recommendedResponse,
-				] = await Promise.all([
-					axios.get("/video/featured"),
-					axios.get("/video/trending"),
-					axios.get("/video/popular"),
-					axios.get("/video/new-release"),
-					axios.get("/video/category/action"),
-					axios.get("/video/continue-watching"),
-					axios.get("/video/recommendations"),
-				]);
+				// Single API call to get all home page data
+				const response = await axios.get("/video/home");
+				const data = response.data;
 
-				// 1️⃣ Featured Video
-				const featured = featuredResponse.data;
-				setFeaturedVideo({
-					id: featured.id,
-					title: featured.title,
-					description:
-						featured.description?.slice(0, 200) + "..." ||
-						"No description available...",
-					backdrop: featured.backdrop_path,
-					poster: featured.thumbnail_path,
-					rating: featured.rating || 0,
-					year: featured.release_year,
-					genre: featured.category || "Entertainment",
-					duration: formatDuration(featured.duration),
-					slug: featured.slug,
-					content_rating: featured.content_rating,
-					resolutions: featured.resolutions,
-					exists_in_watchlist: featured.exists_in_watchlist,
+				// Transform and set all data
+				setHomeData({
+					featured: data.featured ? transformFeaturedData(data.featured) : null,
+					trending: data.trending.map(transformVideoData),
+					popular: data.popular.map(transformVideoData),
+					newReleases: data.newReleases.map(transformVideoData),
+					action: data.action.map(transformVideoData),
+					continueWatching: data.continueWatching.map(
+						transformContinueWatchingData,
+					),
+					recommended: data.recommended.map(transformVideoData),
 				});
-
-				// 2️⃣ Trending
-				setTrendingVideos(
-					trendingResponse.data.map((video) => ({
-						id: video.id,
-						title: video.title,
-						poster: video.thumbnail_path,
-						slug: video.slug,
-						rating: video.rating || 0,
-						year: video.release_year,
-						duration: formatDuration(video.duration),
-						resolutions: video.resolutions,
-						exists_in_watchlist: video.exists_in_watchlist,
-					})),
-				);
-
-				// 3️⃣ Popular
-				setPopularVideos(
-					popularResponse.data.map((video) => ({
-						id: video.id,
-						title: video.title,
-						poster: video.thumbnail_path,
-						slug: video.slug,
-						rating: video.rating || 0,
-						year: video.release_year,
-						duration: formatDuration(video.duration),
-						resolutions: video.resolutions,
-						exists_in_watchlist: video.exists_in_watchlist,
-					})),
-				);
-
-				// 4️⃣ New Releases
-				setNewReleases(
-					newReleasesResponse.data.map((video) => ({
-						id: video.id,
-						title: video.title,
-						poster: video.thumbnail_path,
-						slug: video.slug,
-						rating: video.rating || 0,
-						year: video.release_year,
-						duration: formatDuration(video.duration),
-						resolutions: video.resolutions,
-						exists_in_watchlist: video.exists_in_watchlist,
-					})),
-				);
-
-				// 5️⃣ Action & Adventure
-				setActionVideos(
-					actionResponse.data.map((video) => ({
-						id: video.id,
-						title: video.title,
-						poster: video.thumbnail_path,
-						slug: video.slug,
-						rating: video.rating || 0,
-						year: video.release_year,
-						duration: formatDuration(video.duration),
-						resolutions: video.resolutions,
-						exists_in_watchlist: video.exists_in_watchlist,
-					})),
-				);
-
-				// 6️⃣ Continue Watching
-				setContinueWatching(
-					continueWatchingResponse.data.map((record) => {
-						const video = record.video;
-						const progress = Math.min(
-							(record.watched_duration / video.duration) * 100,
-							100,
-						);
-						const remainingSeconds = Math.max(
-							video.duration - record.watched_duration,
-							0,
-						);
-
-						return {
-							id: video.id,
-							title: video.title,
-							backdrop: video.backdrop_path,
-							slug: video.slug,
-							description: video.description,
-							progress: Math.round(progress),
-							timeLeft: formatTimeRemaining(remainingSeconds),
-							lastWatched: record.finished_at || record.updated_at,
-							currentTime: record.watched_duration,
-							totalDuration: video.duration,
-							watchHistoryId: record.id,
-						};
-					}),
-				);
-
-				// 7️⃣ Recommended
-				setRecommended(
-					recommendedResponse.data.map((video) => ({
-						id: video.id,
-						title: video.title,
-						poster: video.thumbnail_path,
-						slug: video.slug,
-						rating: video.rating || 0,
-						year: video.release_year,
-						duration: formatDuration(video.duration),
-						resolutions: video.resolutions,
-						exists_in_watchlist: video.exists_in_watchlist,
-					})),
-				);
 			} catch (err) {
 				console.error("Error fetching home data:", err);
 				setError("Failed to load content. Please try again.");
@@ -304,6 +263,8 @@ export default function HomePage() {
 
 		fetchHomeData();
 	}, [user]);
+
+	// ===== LOADING & ERROR STATES =====
 
 	if (isLoading || !user || !mounted || loading) {
 		return <PageLoadingComponent />;
@@ -330,74 +291,82 @@ export default function HomePage() {
 		);
 	}
 
-	if (!featuredVideo) {
+	if (!homeData.featured) {
 		return <PageLoadingComponent />;
 	}
 
+	// ===== MAIN RENDER =====
+
 	return (
 		<div className="min-h-screen bg-background">
-			{/* Featured Hero Section */}
+			{/* ===== FEATURED HERO SECTION ===== */}
 			<section className="relative h-[60vh] sm:h-[70vh] md:h-[80vh] lg:h-[85vh] overflow-hidden">
+				{/* Background Image with Gradients */}
 				<div
 					className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-					style={{ backgroundImage: `url(${featuredVideo.backdrop})` }}>
+					style={{ backgroundImage: `url(${homeData.featured.backdrop})` }}>
 					<div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/80 sm:via-background/70 to-transparent" />
 					<div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/60" />
 				</div>
 
+				{/* Hero Content */}
 				<div className="relative h-full flex items-center">
 					<div className="container mx-auto px-4 sm:px-6">
 						<div className="max-w-full sm:max-w-2xl md:max-w-3xl">
 							{/* Title */}
 							<h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 md:mb-8 leading-tight text-primary">
-								{featuredVideo.title}
+								{homeData.featured.title}
 							</h1>
 
 							{/* Metadata */}
 							<div className="flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6 mb-4 sm:mb-6 md:mb-8 text-foreground/90">
 								<span className="text-sm sm:text-base md:text-lg">
-									{featuredVideo.year}
+									{homeData.featured.year}
 								</span>
 								<span className="text-sm sm:text-base md:text-lg">
-									{featuredVideo.duration}
+									{homeData.featured.duration}
 								</span>
-								<Badge
-									variant="outline"
-									className="border-primary/50 text-primary bg-primary/10 hover:bg-primary/20 text-xs sm:text-sm">
-									{
-										featuredVideo.resolutions[
-											featuredVideo.resolutions.length - 1
-										]
-									}
-								</Badge>
-								{featuredVideo.content_rating && (
+								{homeData.featured.resolutions.length > 0 && (
+									<Badge
+										variant="outline"
+										className="border-primary/50 text-primary bg-primary/10 hover:bg-primary/20 text-xs sm:text-sm">
+										{
+											homeData.featured.resolutions[
+												homeData.featured.resolutions.length - 1
+											]
+										}
+									</Badge>
+								)}
+								{homeData.featured.content_rating && (
 									<Badge variant="secondary" className="text-xs sm:text-sm">
-										{featuredVideo.content_rating}
+										{homeData.featured.content_rating}
 									</Badge>
 								)}
 							</div>
 
 							{/* Description */}
 							<p className="text-sm sm:text-base md:text-lg lg:text-xl mb-6 sm:mb-8 md:mb-10 leading-relaxed max-w-full sm:max-w-xl md:max-w-2xl font-light text-foreground/80 line-clamp-3 sm:line-clamp-none">
-								{featuredVideo.description}
+								{homeData.featured.description}
 							</p>
 
 							{/* Action Buttons */}
-							<div className="flex  xs:flex-row gap-3 sm:gap-4">
+							<div className="flex gap-3 sm:gap-4">
 								<Button
-									variant={"default"}
+									variant="default"
 									onClick={() =>
-										router.push(`/video/watch/${featuredVideo.id}`)
+										router.push(`/video/watch/${homeData.featured.id}`)
 									}>
 									<Icon
 										icon="solar:play-bold"
-										className="w-4 h-4 sm:w-5 md:w-6 lg:w-7  md:h-6 lg:h-7 mr-2 sm:mr-3"
+										className="w-4 h-4 sm:w-5 md:w-6 lg:w-7 md:h-6 lg:h-7 mr-2 sm:mr-3"
 									/>
 									Play Now
 								</Button>
 								<Button
 									variant="secondary"
-									onClick={() => router.push(`/video/${featuredVideo.slug}`)}>
+									onClick={() =>
+										router.push(`/video/${homeData.featured.slug}`)
+									}>
 									<Icon icon="ic:round-info" width="2em" height="2em" />
 									More Info
 								</Button>
@@ -412,7 +381,7 @@ export default function HomePage() {
 											height="2em"
 										/>
 									}>
-									{featuredVideo.exists_in_watchlist ? (
+									{homeData.featured.exists_in_watchlist ? (
 										<Icon
 											icon="solar:bookmark-bold"
 											className="w-4 h-4 sm:w-5 md:w-6 lg:w-7 md:h-6 lg:h-7"
@@ -431,72 +400,84 @@ export default function HomePage() {
 				</div>
 
 				{/* Bottom fade gradient */}
-				<div className="absolute bottom-0 left-0 right-0 h-16 sm:h-24 md:h-32 bg-gradient-to-t from-background to-transparent"></div>
+				<div className="absolute bottom-0 left-0 right-0 h-16 sm:h-24 md:h-32 bg-gradient-to-t from-background to-transparent" />
 			</section>
 
-			{/* Continue Watching Section */}
-			<VideoRow
-				title={`Continue Watching for ${userData?.name}`}
-				videos={continueWatching}
-				onVideoClick={handleContinueWatchingClick}
-				onRemove={handleRemoveFromContinueWatching}
-				type="continue-watching"
-				className={`relative px-4 sm:px-6 ${
-					continueWatching.length > 0 ? "-mt-8 sm:-mt-12 md:-mt-16 z-10" : ""
-				}`}
-			/>
+			{/* ===== CONTENT SECTIONS ===== */}
 
-			{/* Video Rows */}
+			{/* Continue Watching Section */}
+			{homeData.continueWatching.length > 0 && (
+				<VideoRow
+					title={`Continue Watching for ${userData?.name}`}
+					videos={homeData.continueWatching}
+					onVideoClick={handleContinueWatchingClick}
+					onRemove={handleRemoveFromContinueWatching}
+					type="continue-watching"
+					className="relative px-4 sm:px-6 -mt-8 sm:-mt-12 md:-mt-16 z-10"
+				/>
+			)}
+
+			{/* Main Video Rows */}
 			<section
 				className={`relative px-4 sm:px-6 ${
-					continueWatching && continueWatching.length > 0
+					homeData.continueWatching.length > 0
 						? "pt-0"
 						: "-mt-12 sm:-mt-16 md:-mt-20 lg:-mt-24"
 				} z-10 pb-10 sm:pb-16 md:pb-20`}>
 				{/* Recommended for You */}
-				<VideoRow
-					title="Recommended for You"
-					videos={recommended}
-					onVideoClick={handleVideoClick}
-					type="poster"
-					className="mb-6 sm:mb-8 md:mb-10"
-				/>
+				{homeData.recommended.length > 0 && (
+					<VideoRow
+						title="Recommended for You"
+						videos={homeData.recommended}
+						onVideoClick={handleVideoClick}
+						type="poster"
+						className="mb-6 sm:mb-8 md:mb-10"
+					/>
+				)}
 
 				{/* Trending Now */}
-				<VideoRow
-					title="Trending Now"
-					videos={trendingVideos}
-					onVideoClick={handleVideoClick}
-					type="poster"
-					className="mb-6 sm:mb-8 md:mb-10"
-				/>
+				{homeData.trending.length > 0 && (
+					<VideoRow
+						title="Trending Now"
+						videos={homeData.trending}
+						onVideoClick={handleVideoClick}
+						type="poster"
+						className="mb-6 sm:mb-8 md:mb-10"
+					/>
+				)}
 
 				{/* Popular on Seenema */}
-				<VideoRow
-					title="Popular on Seenema"
-					videos={popularVideos}
-					onVideoClick={handleVideoClick}
-					type="poster"
-					className="mb-6 sm:mb-8 md:mb-10"
-				/>
+				{homeData.popular.length > 0 && (
+					<VideoRow
+						title="Popular on Seenema"
+						videos={homeData.popular}
+						onVideoClick={handleVideoClick}
+						type="poster"
+						className="mb-6 sm:mb-8 md:mb-10"
+					/>
+				)}
 
 				{/* New Releases */}
-				<VideoRow
-					title="New Releases"
-					videos={newReleases}
-					onVideoClick={handleVideoClick}
-					type="poster"
-					className="mb-6 sm:mb-8 md:mb-10"
-				/>
+				{homeData.newReleases.length > 0 && (
+					<VideoRow
+						title="New Releases"
+						videos={homeData.newReleases}
+						onVideoClick={handleVideoClick}
+						type="poster"
+						className="mb-6 sm:mb-8 md:mb-10"
+					/>
+				)}
 
 				{/* Action & Adventure */}
-				<VideoRow
-					title="Action & Adventure"
-					videos={actionVideos}
-					onVideoClick={handleVideoClick}
-					type="poster"
-					className="mb-6 sm:mb-8 md:mb-10"
-				/>
+				{homeData.action.length > 0 && (
+					<VideoRow
+						title="Action & Adventure"
+						videos={homeData.action}
+						onVideoClick={handleVideoClick}
+						type="poster"
+						className="mb-6 sm:mb-8 md:mb-10"
+					/>
+				)}
 			</section>
 		</div>
 	);
