@@ -43,17 +43,16 @@ export default function HomePage() {
 			{/* Hero Section */}
 			<div className="relative min-h-screen">
 				{/* Background */}
-				<div className="absolute inset-0">
+				<div className="absolute inset-0 top-0">
 					<Image
 						src="/backdrop.jpg"
 						alt="Hero Background"
 						fill
-						className="object-cover opacity-20"
+						className="object-cover object-top opacity-20"
 						priority
 					/>
 					<div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
 				</div>
-
 				{/* Navigation */}
 				<nav className="relative z-20 flex items-center justify-between p-6 lg:px-16">
 					<div className="flex items-center">
@@ -67,7 +66,6 @@ export default function HomePage() {
 						</Button>
 					</div>
 				</nav>
-
 				{/* Hero Content */}
 				<div className="relative z-10 flex flex-col items-center justify-center min-h-[80vh] px-6 text-center">
 					<div className="max-w-4xl mx-auto">

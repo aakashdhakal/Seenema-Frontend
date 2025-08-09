@@ -198,7 +198,7 @@ export default function VideoDetailsPage() {
 				<div className="relative h-[50vh] sm:h-[60vh] lg:h-[70vh] overflow-hidden">
 					{/* Backdrop */}
 					<div
-						className="absolute inset-0 bg-cover bg-center"
+						className="absolute inset-0 bg-cover bg-top"
 						style={{ backgroundImage: `url(${videoData.backdrop})` }}>
 						<div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/60 to-background/20" />
 						<div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />

@@ -575,6 +575,10 @@ export default function VideoPage() {
 				onEnded={() => {
 					setIsPlaying(false);
 					updateWatchHistory(videoId, currentTime);
+					//remove fullscreen if present
+					if (document.fullscreenElement) {
+						document.exitFullscreen().catch((e) => console.warn(e.message));
+					}
 					router.push(`/video/${videoData.slug}`);
 				}}
 				poster={videoData.backdrop_path || ""}

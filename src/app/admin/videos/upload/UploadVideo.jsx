@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,349 +22,649 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress"; // NEW: Import Progress component
+import { Progress } from "@/components/ui/progress";
+
+// Constants
+const MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024; // 10GB
+const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_VIDEO_FORMATS = {
+	"video/*": [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm"],
+};
+
+// Static data
+const CONTENT_RATINGS = [
+	{ value: "G", label: "G - General Audiences" },
+	{ value: "PG", label: "PG - Parental Guidance" },
+	{ value: "PG-13", label: "PG-13 - Parents Strongly Cautioned" },
+	{ value: "R", label: "R - Restricted" },
+	{ value: "NC-17", label: "NC-17 - Adults Only" },
+];
+
+const LANGUAGES = [
+	{ value: "en", label: "English" },
+	{ value: "es", label: "Spanish" },
+	{ value: "fr", label: "French" },
+	{ value: "de", label: "German" },
+	{ value: "it", label: "Italian" },
+	{ value: "ja", label: "Japanese" },
+	{ value: "ko", label: "Korean" },
+	{ value: "zh", label: "Chinese" },
+	{ value: "hi", label: "Hindi" },
+	{ value: "ar", label: "Arabic" },
+	{ value: "np", label: "Nepali" },
+];
+
+const STEPS = [
+	{ id: 1, title: "Upload Video", icon: "material-symbols:cloud-upload" },
+	{ id: 2, title: "Basic Details", icon: "clarity:details-solid" },
+	{ id: 3, title: "Advanced Details", icon: "mdi:account-details-outline" },
+	{ id: 4, title: "Review & Publish", icon: "icon-park-outline:preview-open" },
+];
+
+// Initial form state
+const INITIAL_FORM_DATA = {
+	title: "",
+	description: "",
+	genres: [],
+	tags: [],
+	poster: null,
+	backdrop: null,
+	contentRating: "",
+	visibility: "public",
+	language: "en",
+	credits: [],
+	releaseYear: new Date().getFullYear(),
+	runtime: "",
+	subtitle: null,
+};
+
+const INITIAL_CREDIT_INPUT = {
+	selectedPerson: "",
+	creditedAs: "",
+};
+
+const INITIAL_NEW_PERSON_FORM = {
+	name: "",
+	biography: "",
+	profileImage: null,
+};
 
 export default function VideoUploadPage() {
 	const router = useRouter();
 
-	// States
+	// Core states
 	const [currentStep, setCurrentStep] = useState(1);
 	const [uploadedFile, setUploadedFile] = useState(null);
 	const [previewUrl, setPreviewUrl] = useState(null);
+	const [uploading, setUploading] = useState(false);
+	const [uploadProgress, setUploadProgress] = useState(0);
+
+	// Data states
 	const [people, setPeople] = useState([]);
 	const [availableGenres, setAvailableGenres] = useState([]);
+	const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+
+	// UI states
 	const [creditDialogOpen, setCreditDialogOpen] = useState(false);
 	const [genreInput, setGenreInput] = useState("");
 	const [tagInput, setTagInput] = useState("");
 	const [isCreatingPerson, setIsCreatingPerson] = useState(false);
-	const [uploading, setUploading] = useState(false);
-	const [uploadProgress, setUploadProgress] = useState(0); // NEW: State for upload progress
 
-	// Form data
-	const [formData, setFormData] = useState({
-		title: "",
-		description: "",
-		genres: [],
-		tags: [],
-		poster: null,
-		backdrop: null,
-		contentRating: "",
-		visibility: "public",
-		language: "en",
-		credits: [],
-		releaseYear: new Date().getFullYear(),
-		runtime: "",
-	});
+	// Input states
+	const [creditInput, setCreditInput] = useState(INITIAL_CREDIT_INPUT);
+	const [newPersonForm, setNewPersonForm] = useState(INITIAL_NEW_PERSON_FORM);
 
-	// Separate preview states for images
+	// Preview states
 	const [posterPreview, setPosterPreview] = useState(null);
 	const [backdropPreview, setBackdropPreview] = useState(null);
 
-	// Credit input
-	const [creditInput, setCreditInput] = useState({
-		selectedPerson: "",
-		creditedAs: "",
-	});
+	// Memoized values for performance
+	const availableGenreOptions = useMemo(
+		() =>
+			availableGenres
+				.filter((genreName) => !formData.genres.includes(genreName))
+				.map((genreName) => ({
+					value: genreName,
+					label: genreName,
+				})),
+		[availableGenres, formData.genres],
+	);
 
-	// New person form
-	const [newPersonForm, setNewPersonForm] = useState({
-		name: "",
-		biography: "",
-		profileImage: null,
-	});
+	const peopleOptions = useMemo(
+		() =>
+			people.map((person) => ({
+				value: person.id,
+				label: person.name,
+			})),
+		[people],
+	);
 
-	// Static data
-	const contentRatings = [
-		{ value: "G", label: "G - General Audiences" },
-		{ value: "PG", label: "PG - Parental Guidance" },
-		{ value: "PG-13", label: "PG-13 - Parents Strongly Cautioned" },
-		{ value: "R", label: "R - Restricted" },
-		{ value: "NC-17", label: "NC-17 - Adults Only" },
-	];
+	const selectedPerson = useMemo(
+		() => people.find((p) => p.id === parseInt(creditInput.selectedPerson)),
+		[people, creditInput.selectedPerson],
+	);
 
-	const languages = [
-		{ value: "en", label: "English" },
-		{ value: "es", label: "Spanish" },
-		{ value: "fr", label: "French" },
-		{ value: "de", label: "German" },
-		{ value: "it", label: "Italian" },
-		{ value: "ja", label: "Japanese" },
-		{ value: "ko", label: "Korean" },
-		{ value: "zh", label: "Chinese" },
-		{ value: "hi", label: "Hindi" },
-		{ value: "ar", label: "Arabic" },
-		{ value: "np", label: "Nepali" },
-	];
-
-	const steps = [
-		{ id: 1, title: "Upload Video", icon: "material-symbols:cloud-upload" },
-		{ id: 2, title: "Basic Details", icon: "clarity:details-solid" },
-		{ id: 3, title: "Advanced Details", icon: "mdi:account-details-outline" },
-		{
-			id: 4,
-			title: "Review & Publish",
-			icon: "icon-park-outline:preview-open",
-		},
-	];
-
-	// Fetch initial data for genres and people
+	/**
+	 * Fetch initial data on component mount
+	 */
 	useEffect(() => {
-		const fetchData = async () => {
+		const fetchInitialData = async () => {
 			try {
-				const [peopleRes, genresRes] = await Promise.all([
+				const [peopleResponse, genresResponse] = await Promise.all([
 					axios.get("/people/get"),
 					axios.get("/genre/get"),
 				]);
-				setPeople(peopleRes.data);
-				setAvailableGenres(genresRes.data.map((g) => g.name));
+
+				setPeople(peopleResponse.data);
+				setAvailableGenres(genresResponse.data.map((genre) => genre.name));
 			} catch (error) {
-				console.error("Error fetching data:", error);
+				console.error("Error fetching initial data:", error);
+				toast.error("Failed to load initial data. Please refresh the page.");
 			}
 		};
-		fetchData();
+
+		fetchInitialData();
 	}, []);
 
-	// react-dropzone handler
+	/**
+	 * Clean up object URLs on component unmount
+	 */
+	useEffect(() => {
+		return () => {
+			if (previewUrl) {
+				URL.revokeObjectURL(previewUrl);
+			}
+			if (posterPreview) {
+				URL.revokeObjectURL(posterPreview);
+			}
+			if (backdropPreview) {
+				URL.revokeObjectURL(backdropPreview);
+			}
+		};
+	}, [previewUrl, posterPreview, backdropPreview]);
+
+	/**
+	 * Format video duration from seconds to readable format
+	 */
+	const formatDuration = (durationInSeconds) => {
+		const duration = Math.floor(durationInSeconds);
+		const hours = Math.floor(duration / 3600);
+		const minutes = Math.floor((duration % 3600) / 60);
+		const seconds = duration % 60;
+
+		return hours > 0
+			? `${hours}h ${minutes}m ${seconds}s`
+			: `${minutes}m ${seconds}s`;
+	};
+
+	/**
+	 * Extract filename without extension and format it
+	 */
+	const formatFileName = (fileName) => {
+		return fileName.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ");
+	};
+
+	/**
+	 * Handle file drop for video upload
+	 */
 	const onDrop = useCallback((acceptedFiles) => {
 		const file = acceptedFiles[0];
-		if (file) {
-			if (file.size > 10 * 1024 * 1024 * 1024) {
-				// 10 GB limit
-				toast.error("File size must be less than 10GB");
-				return;
-			}
+		if (!file) return;
 
-			setUploadedFile(file);
-			const videoUrl = URL.createObjectURL(file);
-			setPreviewUrl(videoUrl);
-			setCurrentStep(2);
-
-			const video = document.createElement("video");
-			video.src = videoUrl;
-			video.onloadedmetadata = () => {
-				const duration = Math.floor(video.duration);
-				const hours = Math.floor(duration / 3600);
-				const minutes = Math.floor((duration % 3600) / 60);
-				const seconds = duration % 60;
-
-				setFormData((prev) => ({
-					...prev,
-					runtime:
-						hours > 0
-							? `${hours}h ${minutes}m ${seconds}s`
-							: `${minutes}m ${seconds}s`,
-					title: file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "),
-				}));
-			};
+		// Validate file size
+		if (file.size > MAX_FILE_SIZE) {
+			toast.error("File size must be less than 10GB");
+			return;
 		}
+
+		// Set file and create preview
+		setUploadedFile(file);
+		const videoUrl = URL.createObjectURL(file);
+		setPreviewUrl(videoUrl);
+		setCurrentStep(2);
+
+		// Extract video metadata
+		const video = document.createElement("video");
+		video.src = videoUrl;
+		video.onloadedmetadata = () => {
+			const formattedDuration = formatDuration(video.duration);
+			const formattedTitle = formatFileName(file.name);
+
+			setFormData((prev) => ({
+				...prev,
+				runtime: formattedDuration,
+				title: formattedTitle,
+			}));
+		};
+
+		// Handle video loading errors
+		video.onerror = () => {
+			console.error("Error loading video metadata");
+			toast.error("Error reading video file. Please try another file.");
+		};
 	}, []);
 
+	/**
+	 * Dropzone configuration
+	 */
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
 		onDrop,
-		accept: {
-			"video/*": [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm"],
-		},
+		accept: ACCEPTED_VIDEO_FORMATS,
 		maxFiles: 1,
 	});
 
-	// Form handlers
-	const handleInputChange = (field, value) => {
+	/**
+	 * Generic form input handler
+	 */
+	const handleInputChange = useCallback((field, value) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
-	};
+	}, []);
 
-	const addGenre = (genreValue) => {
-		let genreName = typeof genreValue === "string" ? genreValue.trim() : null;
-		if (genreName && !formData.genres.includes(genreName)) {
-			setFormData((prev) => ({ ...prev, genres: [...prev.genres, genreName] }));
-			setGenreInput("");
-		}
-	};
+	/**
+	 * Add genre to form data
+	 */
+	const addGenre = useCallback(
+		(genreValue) => {
+			const genreName =
+				typeof genreValue === "string" ? genreValue.trim() : null;
 
-	const removeGenre = (genreToRemove) => {
-		setFormData((prev) => ({
-			...prev,
-			genres: prev.genres.filter((g) => g !== genreToRemove),
-		}));
-	};
+			if (!genreName) {
+				toast.error("Please enter a valid genre name");
+				return;
+			}
 
-	const addTag = () => {
-		if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
+			if (formData.genres.includes(genreName)) {
+				toast.error("This genre is already added");
+				return;
+			}
+
 			setFormData((prev) => ({
 				...prev,
-				tags: [...prev.tags, tagInput.trim()],
+				genres: [...prev.genres, genreName],
 			}));
-			setTagInput("");
-		}
-	};
+			setGenreInput("");
+		},
+		[formData.genres],
+	);
 
-	const removeTag = (tagToRemove) => {
+	/**
+	 * Remove genre from form data
+	 */
+	const removeGenre = useCallback((genreToRemove) => {
+		setFormData((prev) => ({
+			...prev,
+			genres: prev.genres.filter((genre) => genre !== genreToRemove),
+		}));
+	}, []);
+
+	/**
+	 * Add tag to form data
+	 */
+	const addTag = useCallback(() => {
+		const trimmedTag = tagInput.trim();
+
+		if (!trimmedTag) {
+			toast.error("Please enter a valid tag");
+			return;
+		}
+
+		if (formData.tags.includes(trimmedTag)) {
+			toast.error("This tag is already added");
+			return;
+		}
+
+		setFormData((prev) => ({
+			...prev,
+			tags: [...prev.tags, trimmedTag],
+		}));
+		setTagInput("");
+	}, [tagInput, formData.tags]);
+
+	/**
+	 * Remove tag from form data
+	 */
+	const removeTag = useCallback((tagToRemove) => {
 		setFormData((prev) => ({
 			...prev,
 			tags: prev.tags.filter((tag) => tag !== tagToRemove),
 		}));
-	};
+	}, []);
 
-	const handleAddCredit = () => {
+	/**
+	 * Add credit (person) to form data
+	 */
+	const handleAddCredit = useCallback(() => {
 		if (!creditInput.selectedPerson) {
 			toast.error("Please select a person");
 			return;
 		}
+
 		const person = people.find(
 			(p) => p.id === parseInt(creditInput.selectedPerson),
 		);
-		if (!person) return;
-		const existingCredit = formData.credits?.find(
-			(c) => c.person_id === parseInt(creditInput.selectedPerson),
-		);
-		if (!existingCredit) {
-			setFormData((prev) => ({
-				...prev,
-				credits: [
-					...(prev.credits || []),
-					{
-						person_id: parseInt(creditInput.selectedPerson),
-						person_name: person.name,
-						credited_as: creditInput.creditedAs,
-					},
-				],
-			}));
-			setCreditInput({ selectedPerson: "", creditedAs: "" });
-		} else {
-			toast.error("This person already has this role");
-		}
-	};
-
-	const removeCredit = (personId) => {
-		setFormData((prev) => ({
-			...prev,
-			credits: prev.credits?.filter((c) => c.person_id !== personId) || [],
-		}));
-	};
-
-	const handleCreatePerson = async () => {
-		setIsCreatingPerson(true);
-		if (!newPersonForm.name.trim()) {
-			toast.error("Please enter a name");
-			setIsCreatingPerson(false);
+		if (!person) {
+			toast.error("Selected person not found");
 			return;
 		}
+
+		// Check for existing credit
+		const existingCredit = formData.credits?.find(
+			(credit) => credit.person_id === parseInt(creditInput.selectedPerson),
+		);
+
+		if (existingCredit) {
+			toast.error("This person is already added to credits");
+			return;
+		}
+
+		const newCredit = {
+			person_id: parseInt(creditInput.selectedPerson),
+			person_name: person.name,
+			credited_as: creditInput.creditedAs,
+		};
+
+		setFormData((prev) => ({
+			...prev,
+			credits: [...(prev.credits || []), newCredit],
+		}));
+
+		setCreditInput(INITIAL_CREDIT_INPUT);
+		toast.success(`${person.name} added to credits`);
+	}, [creditInput, people, formData.credits]);
+
+	/**
+	 * Remove credit from form data
+	 */
+	const removeCredit = useCallback((personId) => {
+		setFormData((prev) => ({
+			...prev,
+			credits:
+				prev.credits?.filter((credit) => credit.person_id !== personId) || [],
+		}));
+	}, []);
+
+	/**
+	 * Create new person and add to people list
+	 */
+	const handleCreatePerson = async () => {
+		if (!newPersonForm.name.trim()) {
+			toast.error("Please enter a person's name");
+			return;
+		}
+
+		setIsCreatingPerson(true);
+
 		try {
 			const personData = new FormData();
-			personData.append("name", newPersonForm.name);
-			personData.append("biography", newPersonForm.biography);
+			personData.append("name", newPersonForm.name.trim());
+			personData.append("biography", newPersonForm.biography.trim());
+
 			if (newPersonForm.profileImage) {
 				personData.append("profile_picture", newPersonForm.profileImage);
 			}
+
 			const response = await axios.post("/people/create", personData);
 			const newPerson = response.data;
+
+			// Update people list and select the new person
 			setPeople((prev) => [...prev, newPerson]);
 			setCreditInput((prev) => ({
 				...prev,
 				selectedPerson: newPerson.id.toString(),
 			}));
-			setNewPersonForm({ name: "", biography: "", profileImage: null });
+
+			// Reset form and close dialog
+			setNewPersonForm(INITIAL_NEW_PERSON_FORM);
 			setCreditDialogOpen(false);
+
 			toast.success("Person added successfully!");
 		} catch (error) {
 			console.error("Error creating person:", error);
-			toast.error(error.response?.data?.message || "Failed to add person.");
+			const errorMessage =
+				error.response?.data?.message || "Failed to create person";
+			toast.error(errorMessage);
 		} finally {
 			setIsCreatingPerson(false);
 		}
 	};
 
-	const handleImageUpload = (field, file) => {
-		if (file) {
-			setFormData((prev) => ({ ...prev, [field]: file }));
-			const previewUrl = URL.createObjectURL(file);
-			if (field === "poster") setPosterPreview(previewUrl);
-			else if (field === "backdrop") setBackdropPreview(previewUrl);
+	/**
+	 * Handle image upload (poster, backdrop, profile)
+	 */
+	const handleImageUpload = useCallback((field, file) => {
+		if (!file) return;
+
+		// Validate file type
+		if (!file.type.startsWith("image/")) {
+			toast.error("Please select a valid image file");
+			return;
+		}
+
+		setFormData((prev) => ({ ...prev, [field]: file }));
+
+		const previewUrl = URL.createObjectURL(file);
+		if (field === "poster") {
+			setPosterPreview(previewUrl);
+		} else if (field === "backdrop") {
+			setBackdropPreview(previewUrl);
+		}
+	}, []);
+
+	/**
+	 * Validate form data before submission
+	 */
+	const validateFormData = () => {
+		const requiredFields = [
+			{ field: uploadedFile, message: "Please upload a video file" },
+			{ field: formData.title.trim(), message: "Please enter a video title" },
+			{ field: formData.poster, message: "Please upload a poster image" },
+			{ field: formData.backdrop, message: "Please upload a backdrop image" },
+			{
+				field: formData.genres.length > 0,
+				message: "Please add at least one genre",
+			},
+		];
+
+		for (const { field, message } of requiredFields) {
+			if (!field) {
+				toast.error(message);
+				return false;
+			}
+		}
+
+		return true;
+	};
+
+	/**
+	 * Upload video file in chunks with progress tracking
+	 */
+	const uploadVideoInChunks = async (videoId, file) => {
+		const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+		for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+			const start = chunkIndex * CHUNK_SIZE;
+			const end = Math.min(start + CHUNK_SIZE, file.size);
+			const chunk = file.slice(start, end);
+
+			const chunkFormData = new FormData();
+			chunkFormData.append("video_id", videoId);
+			chunkFormData.append("chunk", chunk, file.name);
+			chunkFormData.append("is_last", chunkIndex === totalChunks - 1);
+
+			try {
+				await axios.post("/video/chunk/upload", chunkFormData);
+				const progress = Math.round((end / file.size) * 100);
+				setUploadProgress(progress);
+			} catch (error) {
+				throw new Error(
+					`Failed to upload chunk ${chunkIndex + 1}/${totalChunks}`,
+				);
+			}
 		}
 	};
 
-	// MODIFIED: handleSubmit function with chunking logic
-	const handleSubmit = async () => {
-		// --- Step 1: Validation ---
-		if (
-			!uploadedFile ||
-			!formData.title.trim() ||
-			!formData.poster ||
-			!formData.backdrop ||
-			formData.genres.length === 0
-		) {
-			toast.error(
-				"Please fill all required fields: Video, Title, Poster, Backdrop, and at least one Genre.",
+	/**
+	 * Add related data (genres, tags, credits) to video
+	 */
+	const addRelatedData = async (videoId) => {
+		const promises = [];
+
+		if (formData.genres.length > 0) {
+			promises.push(
+				axios.post("/genre/add", {
+					videoId,
+					genres: formData.genres,
+				}),
 			);
-			return;
 		}
+
+		if (formData.tags.length > 0) {
+			promises.push(
+				axios.post("/tags/add", {
+					videoId,
+					tags: formData.tags,
+				}),
+			);
+		}
+
+		if (formData.credits.length > 0) {
+			promises.push(
+				axios.post("/people/add-credit", {
+					videoId,
+					credits: formData.credits,
+				}),
+			);
+		}
+
+		await Promise.all(promises);
+	};
+
+	/**
+	 * Main form submission handler
+	 */
+	const handleSubmit = async () => {
+		// Validate form data
+		if (!validateFormData()) return;
+
 		setUploading(true);
 		setUploadProgress(0);
 
 		try {
-			// --- Step 2: Create video entry with metadata ---
-			const metadataForm = new FormData();
-			metadataForm.append("title", formData.title);
-			metadataForm.append("description", formData.description);
-			metadataForm.append("poster", formData.poster);
-			metadataForm.append("backdrop", formData.backdrop);
-			metadataForm.append("original_filename", uploadedFile.name);
-			metadataForm.append("releaseYear", formData.releaseYear);
-			metadataForm.append("contentRating", formData.contentRating);
-			metadataForm.append("visibility", formData.visibility);
-			metadataForm.append("language", formData.language);
+			// Step 1: Create video entry with metadata
+			const metadataFormData = new FormData();
+			metadataFormData.append("title", formData.title.trim());
+			metadataFormData.append("description", formData.description.trim());
+			metadataFormData.append("poster", formData.poster);
+			metadataFormData.append("backdrop", formData.backdrop);
+			metadataFormData.append("original_filename", uploadedFile.name);
+			metadataFormData.append("releaseYear", formData.releaseYear.toString());
+			metadataFormData.append("contentRating", formData.contentRating);
+			metadataFormData.append("visibility", formData.visibility);
+			metadataFormData.append("language", formData.language);
 
-			const createResponse = await axios.post("/video/create", metadataForm);
-			const { video_id } = createResponse.data;
-
-			// --- Step 3: Upload file in chunks ---
-			const chunkSize = 5 * 1024 * 1024; // 5MB
-			const totalChunks = Math.ceil(uploadedFile.size / chunkSize);
-
-			for (let i = 0; i < totalChunks; i++) {
-				const start = i * chunkSize;
-				const end = Math.min(start + chunkSize, uploadedFile.size);
-				const chunk = uploadedFile.slice(start, end);
-				const chunkForm = new FormData();
-				chunkForm.append("video_id", video_id);
-				chunkForm.append("chunk", chunk, uploadedFile.name);
-				chunkForm.append("is_last", i === totalChunks - 1);
-
-				await axios.post("/video/chunk/upload", chunkForm);
-				setUploadProgress(Math.round((end / uploadedFile.size) * 100));
+			if (formData.subtitle) {
+				metadataFormData.append("subtitle", formData.subtitle);
 			}
 
-			// --- Step 4: Add related data (genres, tags, credits) ---
-			if (formData.genres.length > 0)
-				await axios.post("/genre/add", {
-					videoId: video_id,
-					genres: formData.genres,
-				});
-			if (formData.tags.length > 0)
-				await axios.post("/tags/add", {
-					videoId: video_id,
-					tags: formData.tags,
-				});
-			if (formData.credits.length > 0)
-				await axios.post("/people/add-credit", {
-					videoId: video_id,
-					credits: formData.credits,
-				});
+			const createResponse = await axios.post(
+				"/video/create",
+				metadataFormData,
+			);
+			const { video_id } = createResponse.data;
+
+			// Step 2: Upload video file in chunks
+			await uploadVideoInChunks(video_id, uploadedFile);
+
+			// Step 3: Add related data (genres, tags, credits)
+			await addRelatedData(video_id);
 
 			toast.success("Upload complete! Your video is now being processed.");
 			router.push("/admin/videos");
 		} catch (error) {
 			console.error("Upload error:", error);
-			toast.error(
-				error.response?.data?.message || "An error occurred during upload.",
-			);
+			const errorMessage =
+				error.response?.data?.message || "An error occurred during upload";
+			toast.error(errorMessage);
 		} finally {
 			setUploading(false);
+			setUploadProgress(0);
 		}
 	};
 
+	/**
+	 * Handle step navigation with validation
+	 */
+	const goToStep = useCallback(
+		(step) => {
+			if (step < 1 || step > 4) return;
+
+			// Add validation for specific steps if needed
+			if (step === 2 && !uploadedFile) {
+				toast.error("Please upload a video first");
+				return;
+			}
+
+			setCurrentStep(step);
+		},
+		[uploadedFile],
+	);
+
+	/**
+	 * Reset form to initial state
+	 */
+	const resetForm = useCallback(() => {
+		setFormData(INITIAL_FORM_DATA);
+		setCreditInput(INITIAL_CREDIT_INPUT);
+		setNewPersonForm(INITIAL_NEW_PERSON_FORM);
+		setGenreInput("");
+		setTagInput("");
+		setCurrentStep(1);
+		setUploadedFile(null);
+		setPreviewUrl(null);
+		setPosterPreview(null);
+		setBackdropPreview(null);
+		setUploadProgress(0);
+	}, []);
+
+	/**
+	 * Handle genre input key press
+	 */
+	const handleGenreKeyPress = useCallback(
+		(event) => {
+			if (event.key === "Enter") {
+				event.preventDefault();
+				if (genreInput.trim()) {
+					addGenre(genreInput.trim());
+				}
+			}
+		},
+		[genreInput, addGenre],
+	);
+
+	/**
+	 * Handle tag input key press
+	 */
+	const handleTagKeyPress = useCallback(
+		(event) => {
+			if (event.key === "Enter") {
+				event.preventDefault();
+				addTag();
+			}
+		},
+		[addTag],
+	);
+
+	/**
+	 * Handle subtitle file removal
+	 */
+	const removeSubtitle = useCallback((event) => {
+		event.stopPropagation();
+		setFormData((prev) => ({ ...prev, subtitle: null }));
+	}, []);
+
 	return (
 		<div className="container mx-auto px-4 py-8 max-w-6xl">
-			{/* Header */}
+			{/* Header Section */}
 			<div className="mb-8">
 				<Button variant="ghost" onClick={() => router.back()} className="mb-4">
 					<Icon icon="solar:arrow-left-bold" className="mr-2 h-4 w-4" />
@@ -376,7 +676,7 @@ export default function VideoUploadPage() {
 			{/* Progress Steps */}
 			<div className="mb-8">
 				<div className="flex items-center justify-between">
-					{steps.map((step, index) => (
+					{STEPS.map((step, index) => (
 						<div key={step.id} className="flex items-center">
 							<div
 								className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors ${
@@ -400,7 +700,7 @@ export default function VideoUploadPage() {
 									{step.title}
 								</p>
 							</div>
-							{index < steps.length - 1 && (
+							{index < STEPS.length - 1 && (
 								<div
 									className={`w-24 h-0.5 mx-4 ${
 										currentStep > step.id ? "bg-primary" : "bg-border"
@@ -412,7 +712,7 @@ export default function VideoUploadPage() {
 				</div>
 			</div>
 
-			{/* NEW: Show progress overlay during upload */}
+			{/* Upload Progress Overlay */}
 			{uploading && (
 				<div className="fixed inset-0 bg-black/60 z-50 flex flex-col items-center justify-center">
 					<div className="bg-card p-8 rounded-lg shadow-xl w-full max-w-md text-center">
@@ -435,10 +735,6 @@ export default function VideoUploadPage() {
 				<Card>
 					<CardHeader>
 						<CardTitle className="flex items-center">
-							<Icon
-								icon="solar:cloud-upload-bold-duotone"
-								className="mr-2 h-5 w-5"
-							/>
 							Select Video File
 						</CardTitle>
 					</CardHeader>
@@ -452,7 +748,7 @@ export default function VideoUploadPage() {
 							}`}>
 							<input {...getInputProps()} />
 							<Icon
-								icon="solar:cloud-upload-bold-duotone"
+								icon="streamline:insert-cloud-video-solid"
 								className="mx-auto h-12 w-12 text-muted-foreground mb-4"
 							/>
 							<h3 className="text-lg font-medium mb-2">
@@ -514,6 +810,7 @@ export default function VideoUploadPage() {
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+								{/* Title */}
 								<div className="md:col-span-2 space-y-2">
 									<Label htmlFor="title">Title *</Label>
 									<Input
@@ -523,6 +820,8 @@ export default function VideoUploadPage() {
 										placeholder="Enter video title"
 									/>
 								</div>
+
+								{/* Description */}
 								<div className="md:col-span-2 space-y-2">
 									<Label htmlFor="description">Description</Label>
 									<Textarea
@@ -540,44 +839,29 @@ export default function VideoUploadPage() {
 								{/* Genres */}
 								<div className="md:col-span-2 space-y-2">
 									<Label htmlFor="genres">Genres *</Label>
+
+									{/* Genre Input */}
 									<div className="flex gap-2 mb-2">
 										<Input
 											value={genreInput}
 											onChange={(e) => setGenreInput(e.target.value)}
 											placeholder="Type genre name..."
-											onKeyPress={(e) => {
-												if (e.key === "Enter") {
-													e.preventDefault();
-													if (genreInput.trim()) {
-														addGenre(genreInput.trim());
-													}
-												}
-											}}
+											onKeyPress={handleGenreKeyPress}
 											className="flex-1"
 										/>
 										<Button
-											onClick={() => {
-												if (genreInput.trim()) {
-													addGenre(genreInput.trim());
-												}
-											}}
+											onClick={() => addGenre(genreInput.trim())}
 											variant="outline"
 											disabled={!genreInput.trim()}>
 											<Icon icon="mingcute:add-fill" className="h-4 w-4" />
 										</Button>
 									</div>
 
-									{availableGenres.length > 0 && (
+									{/* Existing Genres Dropdown */}
+									{availableGenreOptions.length > 0 && (
 										<div className="mb-2">
 											<ComboBox
-												items={availableGenres
-													.filter(
-														(genreName) => !formData.genres.includes(genreName),
-													)
-													.map((genreName) => ({
-														value: genreName,
-														label: genreName,
-													}))}
+												items={availableGenreOptions}
 												value=""
 												onValueChange={(value) => addGenre(value)}
 												placeholder="Or select from existing genres..."
@@ -588,6 +872,7 @@ export default function VideoUploadPage() {
 										</div>
 									)}
 
+									{/* Selected Genres */}
 									<div className="flex flex-wrap gap-2">
 										{formData.genres.map((genreName, index) => (
 											<Badge
@@ -627,7 +912,8 @@ export default function VideoUploadPage() {
 												onChange={(e) =>
 													handleInputChange(
 														"releaseYear",
-														parseInt(e.target.value),
+														parseInt(e.target.value) ||
+															new Date().getFullYear(),
 													)
 												}
 												min="1900"
@@ -641,7 +927,7 @@ export default function VideoUploadPage() {
 												onValueChange={(value) =>
 													handleInputChange("contentRating", value)
 												}
-												options={contentRatings}
+												options={CONTENT_RATINGS}
 												label="Select Content Rating"
 											/>
 										</div>
@@ -652,7 +938,7 @@ export default function VideoUploadPage() {
 												onValueChange={(value) =>
 													handleInputChange("language", value)
 												}
-												options={languages}
+												options={LANGUAGES}
 												label="Select Language"
 											/>
 										</div>
@@ -668,9 +954,7 @@ export default function VideoUploadPage() {
 										value={tagInput}
 										onChange={(e) => setTagInput(e.target.value)}
 										placeholder="Type tag name..."
-										onKeyPress={(e) =>
-											e.key === "Enter" && (e.preventDefault(), addTag())
-										}
+										onKeyPress={handleTagKeyPress}
 									/>
 									<Button
 										onClick={addTag}
@@ -700,12 +984,13 @@ export default function VideoUploadPage() {
 								</div>
 							</div>
 
+							{/* Navigation */}
 							<div className="flex justify-between">
-								<Button variant="outline" onClick={() => setCurrentStep(1)}>
+								<Button variant="outline" onClick={() => goToStep(1)}>
 									<Icon icon="solar:arrow-left-bold" className="mr-2 h-4 w-4" />
 									Back
 								</Button>
-								<Button onClick={() => setCurrentStep(3)}>
+								<Button onClick={() => goToStep(3)}>
 									Next
 									<Icon
 										icon="solar:arrow-right-bold"
@@ -754,7 +1039,7 @@ export default function VideoUploadPage() {
 											) : (
 												<div className="flex flex-col items-center justify-center text-center p-4">
 													<Icon
-														icon="solar:cloud-upload-bold-duotone"
+														icon="majesticons:image-plus"
 														className="h-8 w-8 text-muted-foreground mb-2"
 													/>
 													<span className="text-sm font-medium text-muted-foreground">
@@ -771,48 +1056,106 @@ export default function VideoUploadPage() {
 										</p>
 									</div>
 
-									{/* Backdrop Upload */}
-									<div className="space-y-2">
-										<Label>Backdrop *</Label>
-										<Input
-											id="backdrop"
-											type="file"
-											accept="image/*"
-											onChange={(e) =>
-												handleImageUpload("backdrop", e.target.files[0])
-											}
-											className="hidden"
-										/>
-										<div
-											className="w-full h-40 flex items-center justify-center bg-muted rounded border shadow-md cursor-pointer hover:bg-muted/80 transition-colors"
-											style={{ aspectRatio: "16/9" }}
-											onClick={() =>
-												document.getElementById("backdrop").click()
-											}>
-											{backdropPreview ? (
-												<img
-													src={backdropPreview}
-													alt="Backdrop preview"
-													className="w-full h-full object-cover rounded"
-												/>
-											) : (
-												<div className="flex flex-col items-center justify-center text-center p-4">
-													<Icon
-														icon="solar:cloud-upload-bold-duotone"
-														className="h-8 w-8 text-muted-foreground mb-2"
+									{/* Backdrop & Subtitle Upload */}
+									<div className="space-y-4">
+										{/* Backdrop Upload */}
+										<div className="space-y-2">
+											<Label>Backdrop *</Label>
+											<Input
+												id="backdrop"
+												type="file"
+												accept="image/*"
+												onChange={(e) =>
+													handleImageUpload("backdrop", e.target.files[0])
+												}
+												className="hidden"
+											/>
+											<div
+												className="w-full h-40 flex items-center justify-center bg-muted rounded border shadow-md cursor-pointer hover:bg-muted/80 transition-colors"
+												style={{ aspectRatio: "16/9" }}
+												onClick={() =>
+													document.getElementById("backdrop").click()
+												}>
+												{backdropPreview ? (
+													<img
+														src={backdropPreview}
+														alt="Backdrop preview"
+														className="w-full h-full object-cover rounded"
 													/>
-													<span className="text-sm font-medium text-muted-foreground">
-														Upload Backdrop
-													</span>
-													<span className="text-xs text-muted-foreground mt-1">
-														Click to select image
-													</span>
-												</div>
-											)}
+												) : (
+													<div className="flex flex-col items-center justify-center text-center p-4">
+														<Icon
+															icon="majesticons:image-plus"
+															className="h-8 w-8 text-muted-foreground mb-2"
+														/>
+														<span className="text-sm font-medium text-muted-foreground">
+															Upload Backdrop
+														</span>
+														<span className="text-xs text-muted-foreground mt-1">
+															Click to select image
+														</span>
+													</div>
+												)}
+											</div>
+											<p className="text-xs text-muted-foreground">
+												Recommended: 16:9 aspect ratio (e.g., 1920x1080px)
+											</p>
 										</div>
-										<p className="text-xs text-muted-foreground">
-											Recommended: 16:9 aspect ratio (e.g., 1920x1080px)
-										</p>
+
+										{/* Subtitle Upload */}
+										<div className="space-y-2">
+											<Label>Subtitle (optional)</Label>
+											<Input
+												id="subtitle"
+												type="file"
+												accept=".srt,.vtt"
+												onChange={(e) =>
+													setFormData((prev) => ({
+														...prev,
+														subtitle: e.target.files[0],
+													}))
+												}
+												className="hidden"
+											/>
+											<div
+												className="w-full h-12 flex items-center justify-center bg-muted rounded border shadow-md cursor-pointer hover:bg-muted/80 transition-colors"
+												onClick={() =>
+													document.getElementById("subtitle").click()
+												}>
+												{formData.subtitle ? (
+													<div className="flex items-center gap-2 w-full justify-between px-4">
+														<span className="text-sm text-foreground truncate">
+															{formData.subtitle.name}
+														</span>
+														<Button
+															variant="ghost"
+															size="icon"
+															className="h-6 w-6"
+															onClick={removeSubtitle}
+															title="Remove subtitle"
+															tabIndex={-1}>
+															<Icon
+																icon="akar-icons:cross"
+																className="h-4 w-4 text-muted-foreground"
+															/>
+														</Button>
+													</div>
+												) : (
+													<div className="flex items-center gap-2 text-muted-foreground">
+														<Icon
+															icon="ic:baseline-subtitles"
+															className="h-5 w-5"
+														/>
+														<span className="text-sm font-medium">
+															Upload Subtitle (.srt, .vtt)
+														</span>
+													</div>
+												)}
+											</div>
+											<p className="text-xs text-muted-foreground">
+												Optional: Upload subtitle file (.srt or .vtt)
+											</p>
+										</div>
 									</div>
 								</div>
 							</CardContent>
@@ -836,16 +1179,15 @@ export default function VideoUploadPage() {
 								</CardTitle>
 							</CardHeader>
 							<CardContent className="space-y-6">
+								{/* Add Credit Form */}
 								<div className="space-y-4 p-4 border rounded-lg bg-muted/30">
 									<div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 										<div className="lg:col-span-2 space-y-4">
+											{/* Person Selection */}
 											<div className="space-y-2">
 												<Label>Select Person</Label>
 												<ComboBox
-													items={people.map((p) => ({
-														value: p.id,
-														label: p.name,
-													}))}
+													items={peopleOptions}
 													value={creditInput.selectedPerson}
 													onValueChange={(value) =>
 														setCreditInput((prev) => ({
@@ -859,11 +1201,13 @@ export default function VideoUploadPage() {
 													className="w-full"
 												/>
 											</div>
+
+											{/* Credited As */}
 											<div className="space-y-2">
 												<Label htmlFor="creditedAs">Credited As</Label>
 												<Input
 													id="creditedAs"
-													value={creditInput.creditedAs ?? ""}
+													value={creditInput.creditedAs}
 													onChange={(e) =>
 														setCreditInput((prev) => ({
 															...prev,
@@ -873,10 +1217,13 @@ export default function VideoUploadPage() {
 													placeholder="Character name, specific title..."
 												/>
 											</div>
+
+											{/* Add Credit Button */}
 											<Button
 												onClick={handleAddCredit}
 												className="w-full"
-												variant="outline">
+												variant="outline"
+												disabled={!creditInput.selectedPerson}>
 												<Icon
 													icon="mingcute:add-fill"
 													className="h-4 w-4 mr-2"
@@ -884,38 +1231,32 @@ export default function VideoUploadPage() {
 												Add Credit
 											</Button>
 										</div>
+
+										{/* Person Preview */}
 										<div className="lg:col-span-1">
 											<div className="w-full h-48 bg-muted rounded-lg border overflow-hidden">
-												{creditInput.selectedPerson ? (
-													(() => {
-														const selectedPerson = people.find(
-															(p) =>
-																p.id === parseInt(creditInput.selectedPerson),
-														);
-														return selectedPerson ? (
-															<div className="w-full h-full flex flex-col">
-																<div className="flex-1 flex items-center justify-center bg-muted">
-																	{selectedPerson.profile_picture ? (
-																		<img
-																			src={selectedPerson.profile_picture}
-																			alt={selectedPerson.name}
-																			className="w-full h-full object-cover"
-																		/>
-																	) : (
-																		<div className="flex flex-col items-center justify-center text-center p-4">
-																			<Icon
-																				icon="solar:user-bold"
-																				className="h-12 w-12 text-muted-foreground mb-2"
-																			/>
-																			<span className="text-sm text-muted-foreground">
-																				No Photo
-																			</span>
-																		</div>
-																	)}
+												{selectedPerson ? (
+													<div className="w-full h-full flex flex-col">
+														<div className="flex-1 flex items-center justify-center bg-muted">
+															{selectedPerson.profile_picture ? (
+																<img
+																	src={selectedPerson.profile_picture}
+																	alt={selectedPerson.name}
+																	className="w-full h-full object-cover"
+																/>
+															) : (
+																<div className="flex flex-col items-center justify-center text-center p-4">
+																	<Icon
+																		icon="solar:user-bold"
+																		className="h-12 w-12 text-muted-foreground mb-2"
+																	/>
+																	<span className="text-sm text-muted-foreground">
+																		No Photo
+																	</span>
 																</div>
-															</div>
-														) : null;
-													})()
+															)}
+														</div>
+													</div>
 												) : (
 													<div className="w-full h-full flex items-center justify-center">
 														<div className="text-center">
@@ -934,13 +1275,14 @@ export default function VideoUploadPage() {
 									</div>
 								</div>
 
+								{/* Added Credits List */}
 								{formData.credits && formData.credits.length > 0 && (
 									<div>
 										<Label className="text-sm font-medium">Added Credits</Label>
 										<div className="mt-2 flex flex-wrap gap-2">
-											{formData.credits.map((credit, index) => (
+											{formData.credits.map((credit) => (
 												<Badge
-													key={`${credit.person_id}`}
+													key={credit.person_id}
 													variant="secondary"
 													className="flex items-center gap-1">
 													<span className="font-medium">
@@ -990,12 +1332,13 @@ export default function VideoUploadPage() {
 						</CardContent>
 					</Card>
 
+					{/* Navigation */}
 					<div className="flex justify-between">
-						<Button variant="outline" onClick={() => setCurrentStep(2)}>
+						<Button variant="outline" onClick={() => goToStep(2)}>
 							<Icon icon="solar:arrow-left-bold" className="mr-2 h-4 w-4" />
 							Back
 						</Button>
-						<Button onClick={() => setCurrentStep(4)}>
+						<Button onClick={() => goToStep(4)}>
 							Next
 							<Icon icon="solar:arrow-right-bold" className="ml-2 h-4 w-4" />
 						</Button>
@@ -1014,7 +1357,7 @@ export default function VideoUploadPage() {
 							</p>
 						</CardHeader>
 						<CardContent className="space-y-8">
-							{/* Basic Information */}
+							{/* Basic Information Review */}
 							<div>
 								<h3 className="text-lg font-semibold mb-4 flex items-center">
 									<Icon
@@ -1051,7 +1394,7 @@ export default function VideoUploadPage() {
 										</Label>
 										<p className="text-sm mt-1">
 											{
-												languages.find((l) => l.value === formData.language)
+												LANGUAGES.find((l) => l.value === formData.language)
 													?.label
 											}
 										</p>
@@ -1091,7 +1434,7 @@ export default function VideoUploadPage() {
 								</div>
 							</div>
 
-							{/* Media Assets */}
+							{/* Media Assets Review */}
 							<div>
 								<h3 className="text-lg font-semibold mb-4 flex items-center">
 									<Icon icon="solar:gallery-bold" className="h-5 w-5 mr-2" />
@@ -1124,7 +1467,23 @@ export default function VideoUploadPage() {
 											/>
 										</div>
 									)}
-									{!posterPreview && !backdropPreview && (
+									{formData.subtitle && (
+										<div className="text-center">
+											<Label className="text-sm font-medium text-muted-foreground">
+												Subtitle
+											</Label>
+											<div className="flex items-center gap-2 mt-2 p-2 bg-muted rounded">
+												<Icon
+													icon="ic:baseline-subtitles"
+													className="h-4 w-4"
+												/>
+												<span className="text-xs truncate">
+													{formData.subtitle.name}
+												</span>
+											</div>
+										</div>
+									)}
+									{!posterPreview && !backdropPreview && !formData.subtitle && (
 										<p className="text-sm text-muted-foreground">
 											No media assets uploaded
 										</p>
@@ -1132,7 +1491,7 @@ export default function VideoUploadPage() {
 								</div>
 							</div>
 
-							{/* Tags */}
+							{/* Tags Review */}
 							{formData.tags.length > 0 && (
 								<div>
 									<h3 className="text-lg font-semibold mb-4 flex items-center">
@@ -1149,7 +1508,7 @@ export default function VideoUploadPage() {
 								</div>
 							)}
 
-							{/* Cast & Crew */}
+							{/* Cast & Crew Review */}
 							{formData.credits && formData.credits.length > 0 && (
 								<div>
 									<h3 className="text-lg font-semibold mb-4 flex items-center">
@@ -1160,8 +1519,11 @@ export default function VideoUploadPage() {
 										Cast & Crew
 									</h3>
 									<div className="flex flex-wrap gap-2 p-4 bg-muted/30 rounded-lg">
-										{formData.credits.map((credit, index) => (
-											<Badge key={index} variant="outline" className="text-xs">
+										{formData.credits.map((credit) => (
+											<Badge
+												key={credit.person_id}
+												variant="outline"
+												className="text-xs">
 												{credit.person_name}
 												{credit.credited_as && ` (${credit.credited_as})`}
 											</Badge>
@@ -1170,7 +1532,7 @@ export default function VideoUploadPage() {
 								</div>
 							)}
 
-							{/* File Information */}
+							{/* File Information Review */}
 							{uploadedFile && (
 								<div>
 									<h3 className="text-lg font-semibold mb-4 flex items-center">
@@ -1208,9 +1570,9 @@ export default function VideoUploadPage() {
 						</CardContent>
 					</Card>
 
-					{/* Action Buttons */}
+					{/* Final Action Buttons */}
 					<div className="flex justify-between">
-						<Button variant="outline" onClick={() => setCurrentStep(3)}>
+						<Button variant="outline" onClick={() => goToStep(3)}>
 							<Icon icon="solar:arrow-left-bold" className="mr-2 h-4 w-4" />
 							Back
 						</Button>
@@ -1225,6 +1587,7 @@ export default function VideoUploadPage() {
 								title="Cancel Upload"
 								description="Are you sure you want to cancel this upload? All progress will be lost."
 								onConfirm={() => {
+									resetForm();
 									toast.success("Upload cancelled");
 									router.push("/admin/videos");
 								}}
@@ -1263,7 +1626,7 @@ export default function VideoUploadPage() {
 						<DialogTitle>Add New Person</DialogTitle>
 					</DialogHeader>
 					<div className="flex gap-6 min-h-[300px]">
-						{/* Profile Image */}
+						{/* Profile Image Upload */}
 						<div className="flex-shrink-0 w-48">
 							<Input
 								id="personImage"
@@ -1305,13 +1668,14 @@ export default function VideoUploadPage() {
 
 						{/* Form Fields */}
 						<div className="flex-1 space-y-4">
+							{/* Name Input */}
 							<div>
 								<Label htmlFor="personName" className="text-sm font-medium">
 									Name *
 								</Label>
 								<Input
 									id="personName"
-									value={newPersonForm.name ?? ""}
+									value={newPersonForm.name}
 									onChange={(e) =>
 										setNewPersonForm((prev) => ({
 											...prev,
@@ -1322,13 +1686,15 @@ export default function VideoUploadPage() {
 									className="mt-2"
 								/>
 							</div>
+
+							{/* Biography Input */}
 							<div className="flex-1">
 								<Label htmlFor="personBio" className="text-sm font-medium">
 									Biography
 								</Label>
 								<Textarea
 									id="personBio"
-									value={newPersonForm.biography ?? ""}
+									value={newPersonForm.biography}
 									onChange={(e) =>
 										setNewPersonForm((prev) => ({
 											...prev,
@@ -1342,20 +1708,20 @@ export default function VideoUploadPage() {
 							</div>
 						</div>
 					</div>
+
+					{/* Dialog Footer */}
 					<DialogFooter className="mt-6">
 						<Button
 							variant="outline"
 							onClick={() => {
 								setCreditDialogOpen(false);
-								setNewPersonForm({
-									name: "",
-									biography: "",
-									profileImage: null,
-								});
+								setNewPersonForm(INITIAL_NEW_PERSON_FORM);
 							}}>
 							Cancel
 						</Button>
-						<Button onClick={handleCreatePerson} disabled={isCreatingPerson}>
+						<Button
+							onClick={handleCreatePerson}
+							disabled={isCreatingPerson || !newPersonForm.name.trim()}>
 							{isCreatingPerson ? (
 								<div className="flex items-center">
 									<Icon
