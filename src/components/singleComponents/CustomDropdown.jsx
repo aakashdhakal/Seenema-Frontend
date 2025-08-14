@@ -42,13 +42,13 @@ export default function CustomDropdown({
 					size={size}
 					disabled={disabled}
 					className={`text-white hover:text-foreground hover:bg-secondary ${className}`}>
-					{icon && <Icon icon={icon} className="mr-2 h-4 w-4" />}
+					{icon && <Icon icon={icon} className="h-4 w-4 ml-1.5" />}
 					<span className="text-sm">
 						{capitalizeFirst(selectedOption) || placeholder}
 					</span>
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent className="bg-card border-border min-w-[120px] w-[var(--radix-dropdown-menu-trigger-width)]  ">
+			<DropdownMenuContent className="bg-card border-border  w-[var(--radix-dropdown-menu-trigger-width)] min-w-max">
 				{options.map((option, index) => (
 					<DropdownMenuItem
 						key={`${option}-${index}`}

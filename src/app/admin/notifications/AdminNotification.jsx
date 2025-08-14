@@ -222,7 +222,7 @@ export default function AdminNotification() {
 					<Card>
 						<CardHeader>
 							<CardTitle className="flex items-center gap-2">
-								<Icon icon="solar:text-bold-duotone" className="h-5 w-5" />
+								<Icon icon="ci:text" width="2em" height="2em" />
 								Notification Content
 							</CardTitle>
 						</CardHeader>
@@ -279,10 +279,7 @@ export default function AdminNotification() {
 					<Card>
 						<CardHeader>
 							<CardTitle className="flex items-center gap-2">
-								<Icon
-									icon="solar:users-group-rounded-bold-duotone"
-									className="h-5 w-5"
-								/>
+								<Icon icon="solar:user-bold" width="1.5em" height="1.5em" />
 								Select Recipients
 							</CardTitle>
 						</CardHeader>
@@ -376,10 +373,7 @@ export default function AdminNotification() {
 							<CardHeader>
 								<CardTitle className="flex items-center justify-between">
 									<span className="flex items-center gap-2">
-										<Icon
-											icon="solar:users-group-rounded-bold-duotone"
-											className="h-5 w-5"
-										/>
+										<Icon icon="mdi:users" width="1.3em" height="1.3em" />
 										Choose Users
 									</span>
 									<Badge variant="outline">
@@ -391,7 +385,7 @@ export default function AdminNotification() {
 								{/* Search */}
 								<div className="relative">
 									<Icon
-										icon="solar:magnifer-bold-duotone"
+										icon="ri:search-line"
 										className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
 									/>
 									<Input
@@ -423,10 +417,10 @@ export default function AdminNotification() {
 
 								{/* Users List */}
 								<div className="rounded-md border max-h-[400px] overflow-auto">
-									<Table>
+									<Table className="min-w-full">
 										<TableHeader>
 											<TableRow>
-												<TableHead className="w-12">
+												<TableHead className="w-12 ml-2">
 													<Checkbox
 														checked={
 															selectedUsers.length === filteredUsers.length &&

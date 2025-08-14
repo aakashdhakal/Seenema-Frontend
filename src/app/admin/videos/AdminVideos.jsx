@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/singleComponents/StatusBadge";
@@ -43,7 +43,11 @@ export default function AdminVideos() {
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [videoToDelete, setVideoToDelete] = useState(null);
 	const [connectionStatus, setConnectionStatus] = useState("disconnected");
-	const [mounted, setMounted] = useState(false);
+
+	// Pagination states (simplified like products page)
+	const [page, setPage] = useState(1);
+	const itemsPerPage = 10; // Fixed like in products page
+
 	const { user } = useAuthContext();
 
 	// Fetch data
@@ -65,24 +69,16 @@ export default function AdminVideos() {
 		const adminChannel = echo
 			.private("admin.notifications")
 			.listen(".video.processing.status", handleVideoStatusUpdate);
-		console.log("Subscribed to admin.notifications channel", adminChannel);
-
-		const testChannel = echo
-			.channel("test-channel")
-			.listen(".hello.world", (data) => {
-				console.log("Received:", data.message);
-			});
 
 		return () => {
 			adminChannel.stopListening(".video.processing.status");
 			echo.leaveChannel("admin.notifications");
-			testChannel.stopListening(".test.event");
-			echo.leaveChannel("test-channel");
 		};
 	}, [user?.id]);
 
 	// Handle video status updates in real-time
 	const handleVideoStatusUpdate = (data) => {
+		console.log("Video status update received:", data);
 		// Update the video in the videos array
 		setVideos((prevVideos) => {
 			return prevVideos.map((video) => {
@@ -164,7 +160,7 @@ export default function AdminVideos() {
 		}
 	};
 
-	// Filter and sort videos
+	// Filter and sort videos (similar to products page)
 	const filteredVideos = videos
 		.filter((video) => {
 			const matchesSearch =
@@ -193,6 +189,21 @@ export default function AdminVideos() {
 				return aValue < bValue ? 1 : -1;
 			}
 		});
+
+	// Pagination calculation (same as products page)
+	const totalPages = Math.ceil(filteredVideos.length / itemsPerPage);
+	const paginatedVideos = filteredVideos.slice(
+		(page - 1) * itemsPerPage,
+		page * itemsPerPage,
+	);
+	const startItem =
+		filteredVideos.length > 0 ? (page - 1) * itemsPerPage + 1 : 0;
+	const endItem = Math.min(page * itemsPerPage, filteredVideos.length);
+
+	// Reset to first page when filters change
+	useEffect(() => {
+		setPage(1);
+	}, [searchTerm, statusFilter, genreFilter, sortBy, sortOrder]);
 
 	// Utility functions
 	const formatDuration = (seconds) => {
@@ -293,6 +304,13 @@ export default function AdminVideos() {
 		}
 	};
 
+	// Clear all filters
+	const clearFilters = () => {
+		setSearchTerm("");
+		setStatusFilter("all");
+		setGenreFilter("all");
+	};
+
 	// Dropdown options
 	const statusOptions = ["all", "ready", "processing", "failed", "pending"];
 	const genreOptions = ["all", ...genres.map((genre) => genre.name)];
@@ -363,6 +381,68 @@ export default function AdminVideos() {
 		),
 	};
 
+	// Loading skeleton component
+	function VideosPageSkeleton() {
+		return (
+			<div className="space-y-6 p-6">
+				<div className="flex justify-between items-start">
+					<div className="space-y-2">
+						<Skeleton className="h-8 w-64" />
+						<Skeleton className="h-4 w-96" />
+					</div>
+					<Skeleton className="h-10 w-32" />
+				</div>
+
+				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+					{Array.from({ length: 5 }).map((_, i) => (
+						<Card key={i}>
+							<CardHeader className="space-y-0 pb-2">
+								<Skeleton className="h-4 w-24" />
+							</CardHeader>
+							<CardContent>
+								<Skeleton className="h-8 w-12" />
+								<Skeleton className="h-3 w-20 mt-1" />
+							</CardContent>
+						</Card>
+					))}
+				</div>
+
+				<Card>
+					<CardContent>
+						<div className="space-y-4">
+							<div className="flex gap-4">
+								<Skeleton className="h-10 flex-1" />
+								<Skeleton className="h-10 w-32" />
+								<Skeleton className="h-10 w-32" />
+								<Skeleton className="h-10 w-24" />
+								<Skeleton className="h-10 w-10" />
+							</div>
+							<div className="space-y-3">
+								{Array.from({ length: itemsPerPage }).map((_, i) => (
+									<div
+										key={i}
+										className="flex items-center gap-4 p-4 border rounded">
+										<Skeleton className="h-12 w-16 rounded" />
+										<div className="flex-1 space-y-1">
+											<Skeleton className="h-4 w-48" />
+											<Skeleton className="h-3 w-64" />
+										</div>
+										<Skeleton className="h-6 w-16" />
+										<Skeleton className="h-6 w-20" />
+										<Skeleton className="h-6 w-16" />
+										<Skeleton className="h-4 w-16" />
+										<Skeleton className="h-8 w-16" />
+										<Skeleton className="h-8 w-8" />
+									</div>
+								))}
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+		);
+	}
+
 	if (loading) {
 		return <VideosPageSkeleton />;
 	}
@@ -398,7 +478,7 @@ export default function AdminVideos() {
 				</div>
 				<Button asChild>
 					<Link rel="preload" href="/admin/videos/upload">
-						<Icon icon="ion:cloud-upload" width="3em" height="3em" />
+						<Icon icon="ion:cloud-upload" width="1.2em" height="1.2em" />
 						Upload Video
 					</Link>
 				</Button>
@@ -477,246 +557,247 @@ export default function AdminVideos() {
 			</div>
 
 			{/* Filters and Search */}
-			<Card>
-				<CardHeader>
-					<CardTitle>Videos</CardTitle>
-					<CardDescription>Manage your video library</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<div className="flex flex-col sm:flex-row gap-4 mb-6">
-						{/* Search */}
-						<div className="flex-1 border-2 rounded-md">
-							<div className="relative">
-								<Icon
-									icon="ri:search-line"
-									className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-								/>
-								<Input
-									placeholder="Search videos by title or description..."
-									value={searchTerm}
-									onChange={(e) => setSearchTerm(e.target.value)}
-									className="pl-10"
-								/>
-							</div>
-						</div>
+			<div className="flex flex-col sm:flex-row gap-3">
+				<div className="relative flex-grow">
+					<Icon
+						icon="ri:search-line"
+						className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+					/>
+					<Input
+						placeholder="Search videos by title or description..."
+						value={searchTerm}
+						onChange={(e) => setSearchTerm(e.target.value)}
+						className="pl-10"
+					/>
+				</div>
+				<div className="flex gap-3">
+					<CustomDropdown
+						options={statusOptions}
+						selectedOption={statusFilter}
+						onSelect={handleStatusFilter}
+						placeholder={
+							statusFilter === "all"
+								? "All Status"
+								: statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)
+						}
+						variant="outline"
+						size="default"
+						icon="iconoir:filter-solid"
+						className="w-[140px] justify-between text-foreground hover:text-foreground hover:bg-accent"
+					/>
 
-						{/* Status Filter */}
-						<CustomDropdown
-							options={statusOptions}
-							selectedOption={statusFilter}
-							onSelect={handleStatusFilter}
-							placeholder={
-								statusFilter === "all"
-									? "All Status"
-									: statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)
-							}
-							variant="outline"
-							size="default"
-							icon="iconoir:filter-solid"
-							className="w-[140px] justify-between text-foreground hover:text-foreground hover:bg-accent"
-						/>
+					<CustomDropdown
+						options={genreOptions}
+						selectedOption={
+							genreFilter === "all"
+								? "all"
+								: genres.find((g) => g.id.toString() === genreFilter)?.name ||
+								  "all"
+						}
+						onSelect={handleGenreFilter}
+						placeholder={
+							genreFilter === "all"
+								? "All Genres"
+								: genres.find((g) => g.id.toString() === genreFilter)?.name ||
+								  "Genre"
+						}
+						variant="outline"
+						size="default"
+						icon="mdi:tag"
+						className="w-[140px] justify-between text-foreground hover:text-foreground hover:bg-accent"
+					/>
 
-						{/* Genre Filter */}
-						<CustomDropdown
-							options={genreOptions}
-							selectedOption={
-								genreFilter === "all"
-									? "all"
-									: genres.find((g) => g.id.toString() === genreFilter)?.name ||
-									  "all"
-							}
-							onSelect={handleGenreFilter}
-							placeholder={
-								genreFilter === "all"
-									? "All Genres"
-									: genres.find((g) => g.id.toString() === genreFilter)?.name ||
-									  "Genre"
-							}
-							variant="outline"
-							size="default"
-							icon="mdi:tag"
-							className="w-[140px] justify-between text-foreground hover:text-foreground hover:bg-accent"
-						/>
+					<CustomDropdown
+						options={sortOptions}
+						selectedOption={`${
+							sortBy === "title"
+								? "Title"
+								: sortBy === "created_at"
+								? sortOrder === "desc"
+									? "Newest First"
+									: "Oldest First"
+								: sortBy === "duration"
+								? sortOrder === "desc"
+									? "Longest First"
+									: "Shortest First"
+								: "Sort"
+						}`}
+						onSelect={handleSortChange}
+						placeholder="Sort"
+						variant="outline"
+						size="default"
+						icon="mi:sort"
+						className="w-[150px] justify-between text-foreground hover:text-foreground hover:bg-accent"
+					/>
 
-						{/* Sort */}
-						<CustomDropdown
-							options={sortOptions}
-							selectedOption={`${
-								sortBy === "title"
-									? "Title"
-									: sortBy === "created_at"
-									? sortOrder === "desc"
-										? "Newest First"
-										: "Oldest First"
-									: sortBy === "duration"
-									? sortOrder === "desc"
-										? "Longest First"
-										: "Shortest First"
-									: "Sort"
-							}`}
-							onSelect={handleSortChange}
-							placeholder="Sort"
-							variant="outline"
-							size="default"
-							icon="mi:sort"
-							className="w-[150px] justify-between text-foreground hover:text-foreground hover:bg-accent"
-						/>
+					<Button variant="outline" onClick={fetchData}>
+						<Icon icon="eva:refresh-fill" className="h-4 w-4" />
+					</Button>
+				</div>
+			</div>
 
-						{/* Refresh */}
-						<Button variant="outline" onClick={fetchData}>
-							<Icon icon="fa7-solid:refresh" width="1.8em" height="1.8em" />{" "}
-						</Button>
-					</div>
-
-					{/* Videos Table */}
-					<div className="rounded-md border">
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Video</TableHead>
-									<TableHead>Status</TableHead>
-									<TableHead>Genres</TableHead>
-									<TableHead>Quality</TableHead>
-									<TableHead>Duration</TableHead>
-									<TableHead>Upload Date</TableHead>
-									<TableHead>Uploader</TableHead>
-									<TableHead className="text-right">Actions</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{filteredVideos.length > 0 ? (
-									filteredVideos.map((video) => (
-										<TableRow key={video.id}>
-											<TableCell>
-												<div className="flex items-center gap-3">
-													<div className="relative">
-														<img
-															src={
-																video.thumbnail_path || "/placeholder-video.jpg"
-															}
-															alt={video.title}
-															className="w-16 h-12 object-cover rounded cursor-pointer border"
-															onError={(e) => {
-																e.target.src = "/placeholder-video.jpg";
-															}}
-															onClick={() =>
-																window.open(
-																	`/video/watch/${video.id}`,
-																	"_blank",
-																)
-															}
-														/>
-														<div className="absolute bottom-0 right-0 bg-black/75 text-white text-xs px-1 rounded-tl">
-															{formatDuration(video.duration)}
-														</div>
-													</div>
-													<div className="min-w-0 flex-1">
-														<p className="font-medium truncate max-w-[200px]">
-															{video.title}
-														</p>
-														<p className="text-sm text-muted-foreground truncate max-w-[200px]">
-															{video.description || "No description"}
-														</p>
-													</div>
-												</div>
-											</TableCell>
-											<TableCell>
-												<StatusBadge
-													type="video"
-													status={video.status}
-													showIcon={true}
-													size="sm"
+			{/* Videos Table */}
+			<div className="rounded-md border">
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>Video</TableHead>
+							<TableHead>Status</TableHead>
+							<TableHead>Genres</TableHead>
+							<TableHead>Quality</TableHead>
+							<TableHead>Duration</TableHead>
+							<TableHead>Upload Date</TableHead>
+							<TableHead>Uploader</TableHead>
+							<TableHead className="text-right">Actions</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{filteredVideos.length === 0 ? (
+							// Empty state
+							<TableRow>
+								<TableCell colSpan={8} className="text-center py-12">
+									<div className="flex flex-col items-center gap-3">
+										<Icon
+											icon="solar:videocamera-record-bold-duotone"
+											className="h-12 w-12 text-gray-300"
+										/>
+										<h3 className="text-lg font-medium text-gray-900">
+											No videos found
+										</h3>
+										<p className="text-gray-500 max-w-md mx-auto">
+											{searchTerm ||
+											statusFilter !== "all" ||
+											genreFilter !== "all"
+												? "Try adjusting your search or filters to find what you're looking for."
+												: "Get started by uploading your first video to the library."}
+										</p>
+										{(searchTerm ||
+											statusFilter !== "all" ||
+											genreFilter !== "all") && (
+											<Button
+												variant="outline"
+												onClick={clearFilters}
+												className="mt-2">
+												Clear Filters
+											</Button>
+										)}
+									</div>
+								</TableCell>
+							</TableRow>
+						) : (
+							// Video list
+							paginatedVideos.map((video) => (
+								<TableRow key={video.id}>
+									<TableCell>
+										<div className="flex items-center gap-3">
+											<div className="relative">
+												<img
+													src={video.thumbnail_path || "/placeholder-video.jpg"}
+													alt={video.title}
+													className="w-16 h-12 object-cover rounded cursor-pointer border"
+													onError={(e) => {
+														e.target.src = "/placeholder-video.jpg";
+													}}
+													onClick={() =>
+														window.open(`/video/watch/${video.id}`, "_blank")
+													}
 												/>
-											</TableCell>
-											<TableCell>{renderGenres(video.genres)}</TableCell>
-											<TableCell>
-												{renderResolutions(video.resolutions)}
-											</TableCell>
-											<TableCell>
-												<div className="text-sm font-medium">
+												<div className="absolute bottom-0 right-0 bg-black/75 text-white text-xs px-1 rounded-tl">
 													{formatDuration(video.duration)}
 												</div>
-											</TableCell>
-											<TableCell>
-												<div className="text-sm">
-													{formatDate(video.created_at)}
-												</div>
-											</TableCell>
-											<TableCell>
-												<div className="flex items-center gap-2">
-													<UserAvatar
-														src={video.user?.profile_picture}
-														fallback={
-															video.user?.name?.charAt(0).toUpperCase() || "U"
-														}
-														className="h-8 w-8"
-													/>
-													<span className="text-sm truncate max-w-[100px]">
-														{video.user?.name || "Unknown"}
-													</span>
-												</div>
-											</TableCell>
-											<TableCell className="text-right">
-												<CustomDropdown
-													options={actionOptions}
-													onSelect={(action) =>
-														handleVideoAction(action, video)
-													}
-													placeholder=""
-													variant="ghost"
-													size="sm"
-													icon="solar:menu-dots-bold"
-													className="h-8 w-8 p-0 text-foreground hover:text-foreground hover:bg-accent"
-												/>
-											</TableCell>
-										</TableRow>
-									))
-								) : (
-									<TableRow>
-										<TableCell colSpan={8} className="text-center py-8">
-											<div className="flex flex-col items-center gap-2">
-												<Icon
-													icon="solar:videocamera-record-bold-duotone"
-													className="h-8 w-8 text-muted-foreground"
-												/>
-												<p className="text-muted-foreground">
-													{searchTerm ||
-													statusFilter !== "all" ||
-													genreFilter !== "all"
-														? "No videos found matching your criteria"
-														: "No videos uploaded yet"}
-												</p>
-												{!searchTerm &&
-													statusFilter === "all" &&
-													genreFilter === "all" && (
-														<Button asChild className="mt-2">
-															<Link rel="preload" href="/admin/videos/upload">
-																<Icon
-																	icon="solar:add-circle-bold-duotone"
-																	className="mr-2 h-4 w-4"
-																/>
-																Upload First Video
-															</Link>
-														</Button>
-													)}
 											</div>
-										</TableCell>
-									</TableRow>
-								)}
-							</TableBody>
-						</Table>
-					</div>
+											<div className="min-w-0 flex-1">
+												<p className="font-medium truncate max-w-[200px]">
+													{video.title}
+												</p>
+												<p className="text-sm text-muted-foreground truncate max-w-[200px]">
+													{video.description || "No description"}
+												</p>
+											</div>
+										</div>
+									</TableCell>
+									<TableCell>
+										<StatusBadge
+											type="video"
+											status={video.status}
+											showIcon={true}
+											size="sm"
+										/>
+									</TableCell>
+									<TableCell>{renderGenres(video.genres)}</TableCell>
+									<TableCell>{renderResolutions(video.resolutions)}</TableCell>
+									<TableCell>
+										<div className="text-sm font-medium">
+											{formatDuration(video.duration)}
+										</div>
+									</TableCell>
+									<TableCell>
+										<div className="text-sm">
+											{formatDate(video.created_at)}
+										</div>
+									</TableCell>
+									<TableCell>
+										<div className="flex items-center gap-2">
+											<UserAvatar
+												src={video.user?.profile_picture}
+												fallback={
+													video.user?.name?.charAt(0).toUpperCase() || "U"
+												}
+												className="h-8 w-8"
+											/>
+											<span className="text-sm truncate max-w-[100px]">
+												{video.user?.name || "Unknown"}
+											</span>
+										</div>
+									</TableCell>
+									<TableCell className="text-right">
+										<CustomDropdown
+											options={actionOptions}
+											onSelect={(action) => handleVideoAction(action, video)}
+											placeholder=""
+											variant="ghost"
+											size="sm"
+											icon="solar:menu-dots-bold"
+											className="h-8 w-8 p-0 text-foreground hover:text-foreground hover:bg-accent"
+										/>
+									</TableCell>
+								</TableRow>
+							))
+						)}
+					</TableBody>
+				</Table>
+			</div>
 
-					{/* Results Summary */}
-					{filteredVideos.length > 0 && (
-						<div className="flex items-center justify-between pt-4">
-							<p className="text-sm text-muted-foreground">
-								Showing {filteredVideos.length} of {videos.length} videos
-							</p>
+			{/* Pagination */}
+			{!loading && filteredVideos.length > 0 && (
+				<div className="flex justify-between items-center py-4">
+					<div className="text-sm text-muted-foreground">
+						Showing {startItem} to {endItem} of {filteredVideos.length} videos
+					</div>
+					<div className="flex gap-1">
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => setPage(Math.max(1, page - 1))}
+							disabled={page === 1}>
+							<Icon icon="mdi:chevron-left" className="h-4 w-4" />
+						</Button>
+						<div className="flex items-center gap-1 px-2">
+							<span className="text-sm font-medium">{page}</span>
+							<span className="text-sm text-muted-foreground">
+								of {totalPages || 1}
+							</span>
 						</div>
-					)}
-				</CardContent>
-			</Card>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => setPage(Math.min(totalPages, page + 1))}
+							disabled={page === totalPages || totalPages === 0}>
+							<Icon icon="mdi:chevron-right" className="h-4 w-4" />
+						</Button>
+					</div>
+				</div>
+			)}
 
 			{/* Delete Confirmation Dialog */}
 			<CustomAlertDialog
@@ -728,72 +809,6 @@ export default function AdminVideos() {
 				actionText="Delete Video"
 				action={handleDeleteConfirm}
 			/>
-		</div>
-	);
-}
-
-// Loading skeleton component
-function VideosPageSkeleton() {
-	return (
-		<div className="space-y-6 p-6">
-			<div className="flex justify-between items-start">
-				<div className="space-y-2">
-					<Skeleton className="h-8 w-64" />
-					<Skeleton className="h-4 w-96" />
-				</div>
-				<Skeleton className="h-10 w-32" />
-			</div>
-
-			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-				{Array.from({ length: 5 }).map((_, i) => (
-					<Card key={i}>
-						<CardHeader className="space-y-0 pb-2">
-							<Skeleton className="h-4 w-24" />
-						</CardHeader>
-						<CardContent>
-							<Skeleton className="h-8 w-12" />
-							<Skeleton className="h-3 w-20 mt-1" />
-						</CardContent>
-					</Card>
-				))}
-			</div>
-
-			<Card>
-				<CardHeader>
-					<Skeleton className="h-6 w-16" />
-					<Skeleton className="h-4 w-48" />
-				</CardHeader>
-				<CardContent>
-					<div className="space-y-4">
-						<div className="flex gap-4">
-							<Skeleton className="h-10 flex-1" />
-							<Skeleton className="h-10 w-32" />
-							<Skeleton className="h-10 w-32" />
-							<Skeleton className="h-10 w-24" />
-							<Skeleton className="h-10 w-10" />
-						</div>
-						<div className="space-y-3">
-							{Array.from({ length: 5 }).map((_, i) => (
-								<div
-									key={i}
-									className="flex items-center gap-4 p-4 border rounded">
-									<Skeleton className="h-12 w-16 rounded" />
-									<div className="flex-1 space-y-1">
-										<Skeleton className="h-4 w-48" />
-										<Skeleton className="h-3 w-64" />
-									</div>
-									<Skeleton className="h-6 w-16" />
-									<Skeleton className="h-6 w-20" />
-									<Skeleton className="h-6 w-16" />
-									<Skeleton className="h-4 w-16" />
-									<Skeleton className="h-8 w-16" />
-									<Skeleton className="h-8 w-8" />
-								</div>
-							))}
-						</div>
-					</div>
-				</CardContent>
-			</Card>
 		</div>
 	);
 }

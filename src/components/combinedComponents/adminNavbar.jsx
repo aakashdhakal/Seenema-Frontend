@@ -113,37 +113,6 @@ export default function AdminNavbar() {
 					</div>
 				</div>
 
-				{/* Search Bar */}
-				<div className="hidden md:flex w-full max-w-sm border-2 rounded-md">
-					<form onSubmit={handleSearch} className="relative w-full">
-						<Icon
-							icon="solar:magnifer-bold-duotone"
-							className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-colors ${
-								isSearchFocused ? "text-primary" : "text-muted-foreground"
-							}`}
-						/>
-						<Input
-							type="text"
-							placeholder="Search admin panel..."
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
-							onFocus={() => setIsSearchFocused(true)}
-							onBlur={() => setIsSearchFocused(false)}
-							className="pl-10 pr-10 w-full bg-background border-input focus:ring-1 focus:ring-primary"
-						/>
-						{searchQuery && (
-							<Button
-								type="button"
-								variant="ghost"
-								size="sm"
-								className="absolute right-2 top-1/2 h-6 w-6 -translate-y-1/2 p-0 hover:bg-transparent"
-								onClick={() => setSearchQuery("")}>
-								<Icon icon="radix-icons:cross-2" className="h-3 w-3" />
-							</Button>
-						)}
-					</form>
-				</div>
-
 				{/* Actions */}
 				<div className="flex items-center gap-4">
 					{/* Mobile Search */}

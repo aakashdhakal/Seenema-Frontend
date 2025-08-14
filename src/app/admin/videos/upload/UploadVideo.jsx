@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -118,30 +118,35 @@ export default function VideoUploadPage() {
 	const [posterPreview, setPosterPreview] = useState(null);
 	const [backdropPreview, setBackdropPreview] = useState(null);
 
-	// Memoized values for performance
-	const availableGenreOptions = useMemo(
-		() =>
-			availableGenres
-				.filter((genreName) => !formData.genres.includes(genreName))
-				.map((genreName) => ({
-					value: genreName,
-					label: genreName,
-				})),
-		[availableGenres, formData.genres],
-	);
+	// Create preview URLs when images are available
+	useEffect(() => {
+		if (formData.poster) {
+			if (posterPreview) URL.revokeObjectURL(posterPreview);
+			const url = URL.createObjectURL(formData.poster);
+			setPosterPreview(url);
+		}
+		if (formData.backdrop) {
+			if (backdropPreview) URL.revokeObjectURL(backdropPreview);
+			const url = URL.createObjectURL(formData.backdrop);
+			setBackdropPreview(url);
+		}
+	}, [formData.poster, formData.backdrop]);
 
-	const peopleOptions = useMemo(
-		() =>
-			people.map((person) => ({
-				value: person.id,
-				label: person.name,
-			})),
-		[people],
-	);
+	// Computed values (replacing useMemo)
+	const availableGenreOptions = availableGenres
+		.filter((genreName) => !formData.genres.includes(genreName))
+		.map((genreName) => ({
+			value: genreName,
+			label: genreName,
+		}));
 
-	const selectedPerson = useMemo(
-		() => people.find((p) => p.id === parseInt(creditInput.selectedPerson)),
-		[people, creditInput.selectedPerson],
+	const peopleOptions = people.map((person) => ({
+		value: person.id,
+		label: person.name,
+	}));
+
+	const selectedPerson = people.find(
+		(p) => p.id === parseInt(creditInput.selectedPerson),
 	);
 
 	/**
@@ -431,24 +436,35 @@ export default function VideoUploadPage() {
 	/**
 	 * Handle image upload (poster, backdrop, profile)
 	 */
-	const handleImageUpload = useCallback((field, file) => {
-		if (!file) return;
+	const handleImageUpload = useCallback(
+		(field, file) => {
+			if (!file) return;
 
-		// Validate file type
-		if (!file.type.startsWith("image/")) {
-			toast.error("Please select a valid image file");
-			return;
-		}
+			// Validate file type
+			if (!file.type.startsWith("image/")) {
+				toast.error("Please select a valid image file");
+				return;
+			}
 
-		setFormData((prev) => ({ ...prev, [field]: file }));
+			setFormData((prev) => ({ ...prev, [field]: file }));
 
-		const previewUrl = URL.createObjectURL(file);
-		if (field === "poster") {
-			setPosterPreview(previewUrl);
-		} else if (field === "backdrop") {
-			setBackdropPreview(previewUrl);
-		}
-	}, []);
+			const previewUrl = URL.createObjectURL(file);
+			if (field === "poster") {
+				// Clean up previous preview URL
+				if (posterPreview) {
+					URL.revokeObjectURL(posterPreview);
+				}
+				setPosterPreview(previewUrl);
+			} else if (field === "backdrop") {
+				// Clean up previous preview URL
+				if (backdropPreview) {
+					URL.revokeObjectURL(backdropPreview);
+				}
+				setBackdropPreview(previewUrl);
+			}
+		},
+		[posterPreview, backdropPreview],
+	);
 
 	/**
 	 * Validate form data before submission
@@ -1441,6 +1457,7 @@ export default function VideoUploadPage() {
 									Media Assets
 								</h3>
 								<div className="flex gap-6 p-4 bg-muted/30 rounded-lg">
+									{/* Poster */}
 									{posterPreview && (
 										<div className="text-center">
 											<Label className="text-sm font-medium text-muted-foreground">
@@ -1450,10 +1467,10 @@ export default function VideoUploadPage() {
 												src={posterPreview}
 												alt="Poster"
 												className="w-20 h-30 object-cover rounded mt-2"
-												style={{ aspectRatio: "2/3" }}
 											/>
 										</div>
 									)}
+									{/* Backdrop */}
 									{backdropPreview && (
 										<div className="text-center">
 											<Label className="text-sm font-medium text-muted-foreground">
@@ -1467,6 +1484,7 @@ export default function VideoUploadPage() {
 											/>
 										</div>
 									)}
+									{/* Subtitle */}
 									{formData.subtitle && (
 										<div className="text-center">
 											<Label className="text-sm font-medium text-muted-foreground">
@@ -1491,43 +1509,28 @@ export default function VideoUploadPage() {
 								</div>
 							</div>
 
-							{/* Tags Review */}
-							{formData.tags.length > 0 && (
-								<div>
-									<h3 className="text-lg font-semibold mb-4 flex items-center">
-										<Icon icon="solar:tag-bold" className="h-5 w-5 mr-2" />
-										Tags
-									</h3>
-									<div className="flex flex-wrap gap-2 p-4 bg-muted/30 rounded-lg">
-										{formData.tags.map((tagName, index) => (
-											<Badge key={index} variant="secondary">
-												{tagName}
-											</Badge>
-										))}
-									</div>
-								</div>
-							)}
-
-							{/* Cast & Crew Review */}
+							{/* Credits Review */}
 							{formData.credits && formData.credits.length > 0 && (
 								<div>
 									<h3 className="text-lg font-semibold mb-4 flex items-center">
 										<Icon
-											icon="solar:users-group-two-rounded-bold"
+											icon="solar:users-group-rounded-bold"
 											className="h-5 w-5 mr-2"
 										/>
 										Cast & Crew
 									</h3>
-									<div className="flex flex-wrap gap-2 p-4 bg-muted/30 rounded-lg">
-										{formData.credits.map((credit) => (
-											<Badge
-												key={credit.person_id}
-												variant="outline"
-												className="text-xs">
-												{credit.person_name}
-												{credit.credited_as && ` (${credit.credited_as})`}
-											</Badge>
-										))}
+									<div className="p-4 bg-muted/30 rounded-lg">
+										<div className="flex flex-wrap gap-2">
+											{formData.credits.map((credit) => (
+												<Badge
+													key={credit.person_id}
+													variant="outline"
+													className="text-xs">
+													{credit.person_name}
+													{credit.credited_as && ` (${credit.credited_as})`}
+												</Badge>
+											))}
+										</div>
 									</div>
 								</div>
 							)}
@@ -1607,7 +1610,7 @@ export default function VideoUploadPage() {
 								) : (
 									<>
 										<Icon
-											icon="solar:upload-bold-duotone"
+											icon="material-symbols:cloud-upload"
 											className="mr-2 h-4 w-4"
 										/>
 										Upload & Publish
