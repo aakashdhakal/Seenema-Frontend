@@ -108,7 +108,7 @@ export default function NewUserProfileSetup() {
 			});
 			await mutate(); // Refresh user data
 			toast.success("Profile completed successfully!");
-			router.push("/home");
+			router.push("/");
 		} catch (error) {
 			console.error("Error updating profile:", error);
 			toast.error(error.response?.data?.message || "Failed to update profile");
@@ -119,7 +119,7 @@ export default function NewUserProfileSetup() {
 
 	const handleSkip = () => {
 		toast.info("You can complete your profile later from settings");
-		router.push("/home");
+		router.push("/");
 	};
 
 	if (isLoading || !user || !mounted) {

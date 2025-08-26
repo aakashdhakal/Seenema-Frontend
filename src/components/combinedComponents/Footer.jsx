@@ -10,7 +10,7 @@ export default function Footer() {
 
 	const footerLinks = {
 		explore: [
-			{ name: "Home", href: "/home" },
+			{ name: "Home", href: "/" },
 			{ name: "Movies", href: "/movies" },
 			{ name: "Genres", href: "/genres" },
 			{ name: "Popular", href: "/video/popular" },
@@ -60,7 +60,7 @@ export default function Footer() {
 					<div className="lg:col-span-2">
 						<Link
 							rel="preload"
-							href="/home"
+							href="/"
 							className="flex items-center gap-3 mb-6">
 							<Image
 								src="/4.png"

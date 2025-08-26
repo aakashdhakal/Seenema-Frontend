@@ -85,7 +85,7 @@ export default function LoginPage() {
 	useEffect(() => {
 		if (!isLoading && user) {
 			if (user.is_email_verified) {
-				router.replace("/home");
+				router.replace("/");
 			} else {
 				router.replace("/verifyEmail");
 			}

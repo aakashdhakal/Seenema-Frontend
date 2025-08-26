@@ -12,6 +12,8 @@ import VideoRow from "@/components/combinedComponents/VideoRow";
 import { addToWatchList, removeFromWatchList } from "@/lib/helper";
 import { toast } from "sonner";
 import echo from "@/lib/echo";
+import Navbar from "@/components/combinedComponents/Navbar";
+import Footer from "@/components/combinedComponents/Footer";
 
 export default function HomePage() {
 	// ===== AUTH & ROUTING STATE =====
@@ -299,6 +301,7 @@ export default function HomePage() {
 
 	return (
 		<div className="min-h-screen bg-background">
+			<Navbar />
 			{/* ===== FEATURED HERO SECTION ===== */}
 			<section className="relative h-[60vh] sm:h-[70vh] md:h-[80vh] lg:h-[85vh] overflow-hidden">
 				{/* Background Image with Gradients */}
@@ -479,6 +482,7 @@ export default function HomePage() {
 					/>
 				)}
 			</section>
+			<Footer />
 		</div>
 	);
 }

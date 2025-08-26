@@ -45,7 +45,7 @@ export default function Navbar() {
 
 	const navLinks = [
 		{
-			href: "/home",
+			href: "/",
 			label: "Home",
 			icon: "material-symbols:home-outline",
 		},
@@ -89,7 +89,7 @@ export default function Navbar() {
 					{/* Logo */}
 					<Link
 						rel="preload"
-						href="/home"
+						href="/"
 						className="flex items-center space-x-2 flex-shrink-0">
 						<div className="flex items-center">
 							<Image

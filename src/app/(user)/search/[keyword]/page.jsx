@@ -294,7 +294,7 @@ export default function SearchPage() {
 									<Icon icon="solar:refresh-bold" className="w-4 h-4 mr-2" />
 									New Search
 								</Button>
-								<Button onClick={() => router.push("/home")}>
+								<Button onClick={() => router.push("/")}>
 									<Icon icon="solar:home-bold" className="w-4 h-4 mr-2" />
 									Browse All
 								</Button>
@@ -359,7 +359,7 @@ export default function SearchPage() {
 						{/* Call to Action */}
 						<div className="text-center">
 							<Button
-								onClick={() => router.push("/home")}
+								onClick={() => router.push("/")}
 								size="lg"
 								className="px-8">
 								<Icon icon="solar:compass-bold" className="w-5 h-5 mr-2" />

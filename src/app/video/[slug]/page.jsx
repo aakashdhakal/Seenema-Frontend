@@ -167,7 +167,7 @@ export default function VideoDetailsPage() {
 					</p>
 					<div className="flex flex-col sm:flex-row gap-3 justify-center">
 						<Button
-							onClick={() => router.push("/home")}
+							onClick={() => router.push("/")}
 							className="w-full sm:w-auto">
 							<Icon icon="solar:arrow-left-bold" className="w-4 h-4 mr-2" />
 							Go Home
