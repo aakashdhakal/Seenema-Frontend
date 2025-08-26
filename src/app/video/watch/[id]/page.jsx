@@ -20,7 +20,7 @@ import { useRouter } from "next/navigation";
 import { formatDuration } from "@/lib/utils";
 import axios from "@/lib/axios";
 import { parseVTT } from "@/lib/helper";
-import { set } from "date-fns";
+import { useAuthContext } from "@/context/AuthContext";
 
 export default function VideoPage() {
 	// ============================================================================
@@ -34,6 +34,7 @@ export default function VideoPage() {
 	const { id: videoId } = params;
 	const searchParams = useSearchParams();
 	const router = useRouter();
+	const { user, isLoading: authLoading } = useAuthContext();
 
 	// ============================================================================
 	// STATE MANAGEMENT
@@ -77,6 +78,17 @@ export default function VideoPage() {
 	 * Effect to fetch initial video metadata and main manifest
 	 * Runs when videoId changes or component mounts
 	 */
+
+	useEffect(() => {
+		if (!authLoading && !user) {
+			router.replace("/login");
+			return;
+		}
+		if (user && user.status === "suspended") {
+			router.push("/suspended");
+		}
+	}, [user, authLoading, router]);
+
 	useEffect(() => {
 		if (!videoId) return;
 

@@ -21,6 +21,9 @@ export default function AdminRoute({ children }) {
 		} else if (user?.role !== "admin") {
 			// If logged in but not an admin, redirect to an access denied page
 			router.replace("/denied");
+		} else if (user.status === "suspended") {
+			// If the account is suspended, redirect to the suspended page
+			router.replace("/suspended");
 		}
 	}, [user, isLoading, router]);
 

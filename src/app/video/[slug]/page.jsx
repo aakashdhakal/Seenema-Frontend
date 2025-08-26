@@ -89,6 +89,9 @@ export default function VideoDetailsPage() {
 		if (!authLoading && !user) {
 			router.replace("/login");
 		}
+		if (user && user.status === "suspended") {
+			router.push("/suspended");
+		}
 	}, [user, authLoading, router]);
 
 	// Fetch video data

@@ -21,7 +21,7 @@ const nunito = Nunito({
 });
 
 export const metadata = {
-	title: "Seenema",
+	title: "Seenema - Made to Be Seen",
 	description: "See it. Feel it. Seenema",
 };
 

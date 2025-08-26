@@ -60,6 +60,10 @@ export default function WatchlistPage() {
 			router.replace("/login");
 			return;
 		}
+		if (user && user.status === "suspended") {
+			router.push("/suspended");
+			return;
+		}
 	}, [user, isLoading, router]);
 
 	// Fetch watchlist data

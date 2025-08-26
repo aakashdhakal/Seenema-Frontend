@@ -61,6 +61,10 @@ export default function MoviesPage() {
 			router.replace("/login");
 			return;
 		}
+		if (user.status === "suspended") {
+			router.push("/suspended");
+			return;
+		}
 	}, [user, isLoading, router]);
 
 	// Fetch movies and genres
