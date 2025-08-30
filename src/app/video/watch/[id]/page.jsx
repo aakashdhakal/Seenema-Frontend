@@ -59,6 +59,7 @@ export default function VideoPage() {
 	// UI States
 	const [isFullscreen, setIsFullscreen] = useState(false);
 	const [showControls, setShowControls] = useState(true);
+	const [currentAutoResolution, setCurrentAutoResolution] = useState(null);
 
 	// Buffer Information
 	const [bufferInfo, setBufferInfo] = useState({
@@ -187,6 +188,7 @@ export default function VideoPage() {
 					null,
 					timeToSeek,
 					resolution,
+					setCurrentAutoResolution,
 				).catch((err) => {
 					console.error("Error initializing video stream:", err);
 				});
@@ -777,9 +779,20 @@ export default function VideoPage() {
 						<div className="hidden md:block">
 							<CustomDropdown
 								options={["Auto", ...resolutionList]}
-								selectedOption={resolution}
+								// -- 3. Update the selected option's display text --
+								selectedOption={
+									resolution === "Auto" && currentAutoResolution
+										? `Auto (${currentAutoResolution})`
+										: resolution
+								}
 								onSelect={(res) => {
-									if (res !== resolution) setResolution(res);
+									if (res !== resolution) {
+										// Immediately reflect manual choice for better UX
+										if (res !== "Auto") {
+											setCurrentAutoResolution(res);
+										}
+										setResolution(res);
+									}
 								}}
 							/>
 						</div>
