@@ -19,6 +19,7 @@ const nextConfig = {
 			"res.cloudinary.com",
 			"seenemaapi.aakashdhakal.com.np",
 			"seenema.aakashdhakal.com.np",
+			"ui-avatars.com",
 		],
 	},
 };

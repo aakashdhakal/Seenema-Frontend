@@ -6,6 +6,6 @@ export const metadata = {
 		"Admin Dashboard - Manage your Seenema account, view analytics, and control content.",
 };
 
-export default function Login() {
+export default function DashboardPage() {
 	return <AdminDashboard />;
 }

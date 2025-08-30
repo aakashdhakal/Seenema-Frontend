@@ -11,7 +11,7 @@ import axios from "@/lib/axios";
 
 // Optimized constants
 const BANDWIDTH_ALPHA = 0.3; // Faster adaptation
-const FILL_THRESHOLD_SECONDS = 20; // Reduced for faster response
+const FILL_THRESHOLD_SECONDS = 30; // Reduced for faster response
 const WATCH_HISTORY_UPDATE_INTERVAL = 3000; // More frequent updates
 const BUFFER_GAP_TOLERANCE = 0.3; // Tighter tolerance
 const STALL_DETECTION_INTERVAL = 500; // More frequent checks
@@ -262,7 +262,7 @@ async function startMainPlayback(
 	let segmentIndex = 0;
 	let lastSelectedResolution = startupRes;
 	let isSeeking = false;
-	let watchHistoryInterval = null;
+	let watchHistoryUpdateTimeout = null;
 	let currentPlaceholder = initialPlaceholder;
 	let isDestroyed = false;
 	let appendTimeout = null;
@@ -349,27 +349,6 @@ async function startMainPlayback(
 			}
 		}
 	}
-
-	const startWatchHistory = () => {
-		if (isDestroyed) return;
-		clearInterval(watchHistoryInterval);
-		watchHistoryInterval = setInterval(() => {
-			if (
-				!videoElement.paused &&
-				!isSeeking &&
-				videoElement.currentTime > introDuration
-			) {
-				axios
-					.post("/history/update", {
-						videoId,
-						currentTime: videoElement.currentTime - introDuration,
-					})
-					.catch(() => {});
-			}
-		}, WATCH_HISTORY_UPDATE_INTERVAL);
-	};
-
-	const stopWatchHistory = () => clearInterval(watchHistoryInterval);
 
 	// Enhanced stall detection and recovery
 	const startStallDetector = () => {
@@ -507,6 +486,19 @@ async function startMainPlayback(
 			sourceBuffer.appendBuffer(segmentData);
 			await waitForUpdateEnd(sourceBuffer);
 
+			// Update watch history after a segment is successfully downloaded and appended
+			if (videoElement.currentTime > introDuration) {
+				clearTimeout(watchHistoryUpdateTimeout);
+				watchHistoryUpdateTimeout = setTimeout(() => {
+					axios
+						.post("/history/update", {
+							videoId,
+							currentTime: videoElement.currentTime - introDuration,
+						})
+						.catch(() => {});
+				}, 1000); // Debounce to avoid spamming the server
+			}
+
 			segmentIndex++;
 			preloadNextSegments(); // Start preloading next segment
 			appendNextSegment();
@@ -580,7 +572,7 @@ async function startMainPlayback(
 		if (isBuffered) return;
 
 		isSeeking = true;
-		stopWatchHistory();
+		clearTimeout(watchHistoryUpdateTimeout);
 		clearTimeout(appendTimeout);
 		nextSegmentPromise = null; // Cancel preloading
 
@@ -634,7 +626,6 @@ async function startMainPlayback(
 			console.error("Seek handling error:", err);
 		} finally {
 			isSeeking = false;
-			startWatchHistory();
 			appendNextSegment();
 		}
 	}
@@ -680,26 +671,15 @@ async function startMainPlayback(
 	preloadNextSegments();
 
 	// Event listeners
-	const playHandler = () => {
-		startWatchHistory();
-		if (videoElement.volume > 0) videoElement.muted = false;
-	};
-
-	videoElement.addEventListener("play", playHandler);
-	videoElement.addEventListener("pause", stopWatchHistory);
-	videoElement.addEventListener("ended", stopWatchHistory);
 	videoElement.addEventListener("seeking", handleSeek);
 
 	// Cleanup function
 	return () => {
 		isDestroyed = true;
 		clearTimeout(appendTimeout);
+		clearTimeout(watchHistoryUpdateTimeout);
 		clearInterval(stallCheckInterval);
-		stopWatchHistory();
 
-		videoElement.removeEventListener("play", playHandler);
-		videoElement.removeEventListener("pause", stopWatchHistory);
-		videoElement.removeEventListener("ended", stopWatchHistory);
 		videoElement.removeEventListener("seeking", handleSeek);
 
 		// Clear caches
