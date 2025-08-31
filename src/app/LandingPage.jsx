@@ -37,7 +37,7 @@ export default function LandingPage() {
 				{/* Navigation */}
 				<nav className="relative z-20 flex items-center justify-between p-6 lg:px-16">
 					<div className="flex items-center">
-						<Image src="/3.png" alt="StreamFlow" width={180} height={100} />
+						<Image src="/3.png" alt="Seenema" width={180} height={100} />
 					</div>
 					<div className="flex items-center space-x-4">
 						<Button variant="default" asChild>

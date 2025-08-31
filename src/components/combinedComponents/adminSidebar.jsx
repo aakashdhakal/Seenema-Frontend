@@ -76,7 +76,7 @@ export default function AdminSidebar() {
 					<div className="flex items-center justify-center space-x-3">
 						<Image
 							src="/3.png"
-							alt="StreamFlow"
+							alt="Seenema"
 							width={130}
 							height={40}
 							className="object-cover w-36"

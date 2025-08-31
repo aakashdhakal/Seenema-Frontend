@@ -10,7 +10,7 @@ export default function PageLoadingComponent() {
 				<div className="mb-8">
 					<Image
 						src="/4.png"
-						alt="StreamFlow"
+						alt="Seenema"
 						width={100}
 						height={100}
 						className="mx-auto opacity-90"

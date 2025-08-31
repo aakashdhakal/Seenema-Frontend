@@ -107,7 +107,7 @@ export default function ResetPassword() {
 							<div className="flex items-center justify-center mb-6 z-10 w-full">
 								<Image
 									src="/3.png"
-									alt="StreamFlow Logo"
+									alt="Seenema Logo"
 									width={200}
 									height={100}
 								/>

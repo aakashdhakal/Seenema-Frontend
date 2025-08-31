@@ -72,7 +72,7 @@ export default function VerifyEmailPage() {
 				<div className="flex justify-center mb-8">
 					<Image
 						src="/3.png"
-						alt="StreamFlow Logo"
+						alt="Seenema Logo"
 						width={200}
 						height={100}
 						className="opacity-90"

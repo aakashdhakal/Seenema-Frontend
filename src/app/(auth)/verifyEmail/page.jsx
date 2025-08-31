@@ -4,7 +4,7 @@ import VerifyEmailPage from "./VerifyEmailPage";
 export const metadata = {
 	title: "Verify Email - Seenema",
 	description:
-		"Verify your email address to complete your StreamFlow account setup.",
+		"Verify your email address to complete your Seenema account setup.",
 };
 
 export default function VerifyEmail() {
