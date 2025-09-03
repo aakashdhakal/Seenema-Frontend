@@ -171,6 +171,7 @@ export default function Navbar() {
 											className="relative h-8 w-8 rounded-full p-0 hover:bg-accent/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
 											<UserAvatar
 												src={user.profile_picture}
+												fallback={user.name}
 												className="h-8 w-8"
 											/>
 										</Button>

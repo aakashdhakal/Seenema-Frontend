@@ -192,9 +192,6 @@ export default function ProfilePage() {
 
 	return (
 		<div className="min-h-screen bg-background pt-16">
-			{" "}
-			{/* Added pt-16 for navbar */}
-			{/* Header Section */}
 			<div className="border-b bg-card">
 				<div className="container mx-auto max-w-6xl px-6 py-8">
 					<div className="flex flex-col lg:flex-row gap-8 items-start">
@@ -202,7 +199,13 @@ export default function ProfilePage() {
 						<div className="relative mx-auto lg:mx-0">
 							<div className="relative group border-primary border-2 rounded-full w-24 h-24 overflow-hidden">
 								<Image
-									src={profilePicturePreview || user.profile_picture}
+									src={
+										profilePicturePreview ||
+										user.profile_picture ||
+										`https://ui-avatars.com/api/?name=${encodeURIComponent(
+											user.name || "User",
+										)}&background=000&color=fff&size=128`
+									}
 									alt="Profile Picture"
 									className="w-full h-full object-cover rounded-full border-4 border-border"
 									width={128}

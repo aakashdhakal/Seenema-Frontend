@@ -133,11 +133,11 @@ export async function initializeVideoStream(
 		videoElement.load();
 	}
 
+	
+	let destroyPlayback = () => {};
+	
 	const mediaSource = new MediaSource();
 	videoElement.src = URL.createObjectURL(mediaSource);
-
-	let destroyPlayback = () => {};
-
 	const onSourceOpen = async () => {
 		try {
 			const sourceBuffer = mediaSource.addSourceBuffer(

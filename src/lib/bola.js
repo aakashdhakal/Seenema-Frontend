@@ -138,6 +138,7 @@ export default async function BOLA(
 		"Q (segments)": Q,
 		V_D: V_D,
 		"Final Resolution": resolutionList[bestResIndex],
+		Network: lastBandwidth,
 	};
 	console.table(logData);
 
