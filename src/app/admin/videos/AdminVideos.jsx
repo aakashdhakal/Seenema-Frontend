@@ -100,44 +100,6 @@ export default function AdminVideos() {
 		});
 
 		// Show toast notification based on status
-		showStatusToast(data);
-	};
-
-	// Show appropriate toast based on status
-	const showStatusToast = (data) => {
-		const videoTitle = data.video_title || `Video ${data.video_id}`;
-
-		switch (data.status) {
-			case "ready":
-				toast.success("Video Processing Complete!", {
-					description: `${videoTitle} is now ready for streaming`,
-					duration: 5000,
-					action: {
-						label: "View Video",
-						onClick: () =>
-							window.open(`/video/watch/${data.video_id}`, "_blank"),
-					},
-				});
-				break;
-			case "failed":
-				toast.error("Video Processing Failed", {
-					description: `${videoTitle} failed to process: ${data.message}`,
-					duration: 7000,
-				});
-				break;
-			case "processing":
-				toast.info("Video Processing Started", {
-					description: `${videoTitle} is being processed...`,
-					duration: 3000,
-				});
-				break;
-			default:
-				toast.info("Video Status Updated", {
-					description: `${videoTitle} status changed to ${data.status}`,
-					duration: 3000,
-				});
-				break;
-		}
 	};
 
 	const fetchData = async () => {

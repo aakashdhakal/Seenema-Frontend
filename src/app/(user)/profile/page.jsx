@@ -45,12 +45,12 @@ export default function ProfilePage() {
 
 	const genderOptions = ["male", "female", "other"];
 
-	// Handle hydration
+	
 	useEffect(() => {
 		setMounted(true);
 	}, []);
 
-	// Redirect to login if not authenticated
+	
 	useEffect(() => {
 		if (!isLoading && !user) {
 			router.replace("/login");
@@ -58,7 +58,7 @@ export default function ProfilePage() {
 		}
 	}, [user, isLoading, router]);
 
-	// Set profile data when user is available
+	
 	useEffect(() => {
 		if (user) {
 			setProfileData({
@@ -83,12 +83,12 @@ export default function ProfilePage() {
 		if (user) fetchStats();
 	}, [user]);
 
-	// Handle input changes
+	
 	const handleInputChange = (field, value) => {
 		setProfileData((prev) => ({ ...prev, [field]: value }));
 	};
 
-	// Handle profile picture upload
+	
 	const handleProfilePictureChange = (e) => {
 		const file = e.target.files[0];
 		if (file) {
@@ -108,7 +108,7 @@ export default function ProfilePage() {
 		}
 	};
 
-	// Handle save
+	
 	const handleSave = async () => {
 		if (!profileData.name.trim()) {
 			toast.error("Name is required");
@@ -144,7 +144,7 @@ export default function ProfilePage() {
 		}
 	};
 
-	// Handle cancel
+	
 	const handleCancel = () => {
 		setProfileData({
 			name: user.name || "",
@@ -160,7 +160,7 @@ export default function ProfilePage() {
 		setEditing(false);
 	};
 
-	// Format date
+	
 	const formatDate = (dateString) => {
 		if (!dateString) return "Not set";
 		return new Date(dateString).toLocaleDateString("en-US", {
@@ -170,7 +170,7 @@ export default function ProfilePage() {
 		});
 	};
 
-	// Calculate age
+	
 	const calculateAge = (dob) => {
 		if (!dob) return null;
 		const birthDate = new Date(dob);
@@ -202,7 +202,7 @@ export default function ProfilePage() {
 									src={
 										profilePicturePreview ||
 										user.profile_picture ||
-										`https://ui-avatars.com/api/?name=${encodeURIComponent(
+										`https:
 											user.name || "User",
 										)}&background=000&color=fff&size=128`
 									}

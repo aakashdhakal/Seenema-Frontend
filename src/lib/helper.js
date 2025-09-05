@@ -98,8 +98,6 @@ export const checkIfVideoInWatchList = async (videoId) => {
 	}
 };
 
-//notifications api handlers
-
 export const getNotifications = async (page = 1) => {
 	try {
 		const response = await axios.get("/notifications", {
@@ -179,7 +177,6 @@ export function parseVTT(vttText) {
 	let currentCue = null;
 
 	lines.forEach((line) => {
-		// Skip metadata and empty lines
 		if (line.includes("-->")) {
 			const [start, end] = line.split(" --> ");
 			currentCue = {

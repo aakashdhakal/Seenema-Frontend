@@ -58,7 +58,7 @@ export function getCurrentBufferLevel(videoElement) {
 	if (currentTime < lastBuffered) {
 		return lastBuffered - currentTime;
 	} else {
-		return 0; // No buffer left
+		return 0;
 	}
 }
 
@@ -76,7 +76,6 @@ export function parseManifest(manifestText) {
 			!line.startsWith("#") &&
 			(line.endsWith(".m4s") || line.endsWith(".ts") || line.endsWith(".mp4"))
 		) {
-			// Add segment with duration, size will be filled after
 			segments.push({
 				name: line,
 				duration: currentDuration,
@@ -102,7 +101,6 @@ export function getAvailableResolutions(manifestText) {
 		if (line.startsWith("#EXT-X-STREAM-INF:")) {
 			const resolutionMatch = line.match(/RESOLUTION=(\d+)x(\d+)/);
 			if (resolutionMatch) {
-				// Format as "1080p", "720p", etc.
 				const height = resolutionMatch[2];
 				resolutions.add(`${height}p`);
 			}
@@ -189,9 +187,7 @@ export async function updateWatchHistory(videoId, currentDuration) {
 	}
 }
 
-// ONLY THIS FUNCTION NEEDS TO BE CHANGED
 export function calculateUtility(segmentSizes, resolutionList) {
-	// FIX: Pass segmentSizes to calculateMinSegmentSize
 	const S_min = calculateMinSegmentSize(segmentSizes);
 
 	const utility = [];
@@ -201,7 +197,7 @@ export function calculateUtility(segmentSizes, resolutionList) {
 			const utilityValue = Math.log(S_m / S_min);
 			utility.push(utilityValue);
 		} else {
-			utility.push(0); // If size is 0 or S_min is 0, utility is 0
+			utility.push(0);
 		}
 	});
 	return utility;
@@ -210,7 +206,7 @@ export function calculateUtility(segmentSizes, resolutionList) {
 export function calculateMinSegmentSize(sizes) {
 	const validSizes = Object.values(sizes).filter((size) => size > 0);
 	if (validSizes.length === 0) {
-		return 1; // Prevent division by zero if all sizes are zero, use a small positive number
+		return 1;
 	}
 	return Math.min(...validSizes);
 }

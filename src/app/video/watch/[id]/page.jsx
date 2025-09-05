@@ -23,9 +23,6 @@ import { parseVTT } from "@/lib/helper";
 import { useAuthContext } from "@/context/AuthContext";
 
 export default function VideoPage() {
-	// ============================================================================
-	// REFS AND ROUTER SETUP
-	// ============================================================================
 	const videoRef = useRef(null);
 	const controlsTimeout = useRef(null);
 	const wasPlayingRef = useRef(false);
@@ -36,18 +33,12 @@ export default function VideoPage() {
 	const router = useRouter();
 	const { user, isLoading: authLoading } = useAuthContext();
 
-	// ============================================================================
-	// STATE MANAGEMENT
-	// ============================================================================
-
-	// Video Data and Streaming States
 	const [videoData, setVideoData] = useState({});
 	const [resolutionList, setResolutionList] = useState([]);
 	const [resolution, setResolution] = useState("Auto");
 	const [segmentList, setSegmentList] = useState([]);
 	const [initialSeekTime, setInitialSeekTime] = useState(0);
 
-	// Video Control States
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [isMuted, setIsMuted] = useState(true);
 	const [volume, setVolume] = useState(100);
@@ -56,24 +47,17 @@ export default function VideoPage() {
 	const [playbackRate, setPlaybackRate] = useState(1);
 	const [isLoading, setIsLoading] = useState(true);
 
-	// UI States
 	const [isFullscreen, setIsFullscreen] = useState(false);
 	const [showControls, setShowControls] = useState(true);
 	const [currentAutoResolution, setCurrentAutoResolution] = useState(null);
 
-	// Buffer Information
 	const [bufferInfo, setBufferInfo] = useState({
 		bufferedTime: 0,
 		bufferedPercentage: 0,
 	});
 
-	// Subtitle States
 	const [subtitles, setSubtitles] = useState([]);
 	const [showCaptions, setShowCaptions] = useState(true);
-
-	// ============================================================================
-	// INITIALIZATION EFFECTS
-	// ============================================================================
 
 	/**
 	 * Effect to fetch initial video metadata and main manifest
@@ -93,7 +77,6 @@ export default function VideoPage() {
 	useEffect(() => {
 		if (!videoId) return;
 
-		// Parse start time from URL parameters
 		const startTime = parseFloat(searchParams.get("t"));
 		if (!isNaN(startTime) && startTime > 0) {
 			setInitialSeekTime(startTime);
@@ -167,18 +150,15 @@ export default function VideoPage() {
 			videoData?.duration
 		) {
 			const startStream = async () => {
-				// Store current playing state
 				wasPlayingRef.current = videoRef.current && !videoRef.current.paused;
 				setIsLoading(true);
 
-				// Determine seek time (current position or initial seek time)
 				const timeToSeek =
 					videoRef.current.currentTime > 0 &&
 					!isNaN(videoRef.current.currentTime)
 						? videoRef.current.currentTime
 						: initialSeekTime;
 
-				// Initialize the video stream
 				stream = await initializeVideoStream(
 					videoRef.current,
 					videoId,
@@ -197,7 +177,6 @@ export default function VideoPage() {
 			startStream();
 		}
 
-		// Cleanup function
 		return () => {
 			if (stream && stream.destroy) {
 				stream.destroy();
@@ -211,10 +190,6 @@ export default function VideoPage() {
 		videoData.duration,
 		initialSeekTime,
 	]);
-
-	// ============================================================================
-	// SUBTITLE HANDLING
-	// ============================================================================
 
 	/**
 	 * Effect to fetch and parse subtitle files
@@ -248,24 +223,20 @@ export default function VideoPage() {
 		const video = videoRef.current;
 		const INTRO_DURATION = 8;
 
-		//Remove all existing cues from the track
 		Array.from(video.textTracks).forEach((track) => {
 			if (track.kind === "subtitles") {
-				track.mode = "disabled"; // Disable existing tracks
+				track.mode = "disabled";
 				while (track.cues && track.cues.length > 0) {
-					track.removeCue(track.cues[0]); // Remove all cues
+					track.removeCue(track.cues[0]);
 				}
 			}
 		});
 
-		// Remove all <track> elements too to prevent stacking
 		Array.from(video.querySelectorAll("track")).forEach((el) => el.remove());
 
-		// Create one subtitle track
 		const track = video.addTextTrack("subtitles", "Seenema Subtitles", "en");
 		track.mode = showCaptions ? "showing" : "hidden";
 
-		// Add adjusted cues
 		subtitles.forEach((cue) => {
 			const adjustedStart = Math.max(0, cue.startTime + INTRO_DURATION);
 			const adjustedEnd = cue.endTime + INTRO_DURATION;
@@ -274,25 +245,19 @@ export default function VideoPage() {
 			}
 		});
 
-		// Cleanup
 		return () => {
 			track.mode = "disabled";
 			while (track.cues && track.cues.length > 0) {
 				track.removeCue(track.cues[0]);
 			}
 		};
-	}, [subtitles, showCaptions, videoId, resolution]); // ✅ run fresh on video change only
-
-	// ============================================================================
-	// KEYBOARD SHORTCUTS
-	// ============================================================================
+	}, [subtitles, showCaptions, videoId, resolution]);
 
 	/**
 	 * Effect for keyboard shortcuts and hotkeys
 	 */
 	useEffect(() => {
 		const handleKeyDown = (e) => {
-			// Skip if user is typing in input fields
 			if (
 				document.activeElement.tagName === "INPUT" ||
 				document.activeElement.tagName === "TEXTAREA" ||
@@ -302,36 +267,36 @@ export default function VideoPage() {
 			}
 
 			switch (e.key.toLowerCase()) {
-				case " ": // Spacebar
-				case "k": // K key
+				case " ":
+				case "k":
 					e.preventDefault();
 					togglePlayPause();
 					break;
-				case "m": // Mute toggle
+				case "m":
 					toggleMute();
 					break;
-				case "arrowright": // Skip forward 5s
+				case "arrowright":
 					skipTime(5);
 					break;
-				case "arrowleft": // Skip backward 5s
+				case "arrowleft":
 					skipTime(-5);
 					break;
-				case "arrowup": // Volume up
+				case "arrowup":
 					handleVolumeChange([Math.min(volume + 10, 100)]);
 					break;
-				case "arrowdown": // Volume down
+				case "arrowdown":
 					handleVolumeChange([Math.max(volume - 10, 0)]);
 					break;
-				case "f": // Fullscreen toggle
+				case "f":
 					toggleFullscreen();
 					break;
-				case "c": // Captions toggle
+				case "c":
 					toggleCaptions();
 					break;
-				case ">": // Increase playback speed
+				case ">":
 					handlePlaybackRateChange(Math.min(playbackRate + 0.25, 2));
 					break;
-				case "<": // Decrease playback speed
+				case "<":
 					handlePlaybackRateChange(Math.max(playbackRate - 0.25, 0.25));
 					break;
 				default:
@@ -352,10 +317,6 @@ export default function VideoPage() {
 		showCaptions,
 	]);
 
-	// ============================================================================
-	// UTILITY FUNCTIONS
-	// ============================================================================
-
 	/**
 	 * Calculate and update buffer information
 	 */
@@ -369,7 +330,6 @@ export default function VideoPage() {
 		let maxBufferedEnd = 0;
 		const currentTime = video.currentTime;
 
-		// Find the buffered range that contains current time
 		for (let i = 0; i < video.buffered.length; i++) {
 			if (
 				currentTime >= video.buffered.start(i) &&
@@ -409,10 +369,6 @@ export default function VideoPage() {
 			if (isPlaying) setShowControls(false);
 		}, 5000);
 	};
-
-	// ============================================================================
-	// CONTROL FUNCTIONS
-	// ============================================================================
 
 	/**
 	 * Toggle play/pause state
@@ -516,7 +472,7 @@ export default function VideoPage() {
 	const toggleCaptions = () => {
 		setShowCaptions((prev) => {
 			const newState = !prev;
-			// Update existing text tracks
+
 			if (videoRef.current) {
 				Array.from(videoRef.current.textTracks).forEach((track) => {
 					if (track.kind === "subtitles") {
@@ -528,32 +484,21 @@ export default function VideoPage() {
 		});
 	};
 
-	// ============================================================================
-	// CALCULATED VALUES
-	// ============================================================================
-
 	const progressPercentage = duration
 		? Math.min((currentTime / duration) * 100, 100)
 		: 0;
 
-	// ============================================================================
-	// COMPONENT RENDER
-	// ============================================================================
-
 	return (
 		<div
-			className="fixed inset-0 w-screen h-screen bg-black"
+			className="fixed inset-0 w-screen h-screen bg-black aspect-video"
 			onMouseMove={resetControlsTimeout}
 			onMouseLeave={() => isPlaying && setShowControls(false)}>
-			{/* ============================================================================ */}
-			{/* VIDEO ELEMENT */}
-			{/* ============================================================================ */}
 			<video
 				ref={videoRef}
 				id="video"
 				muted
 				autoPlay
-				className="w-full h-full md:object-cover sm:object-contain"
+				className="w-full h-full md:object-cover sm:object-contain aspect-video"
 				onTimeUpdate={() => {
 					const video = videoRef.current;
 					if (video && !isLoading) {
@@ -589,7 +534,7 @@ export default function VideoPage() {
 				onEnded={() => {
 					setIsPlaying(false);
 					updateWatchHistory(videoId, currentTime);
-					//remove fullscreen if present
+
 					if (document.fullscreenElement) {
 						document.exitFullscreen().catch((e) => console.warn(e.message));
 					}
@@ -779,7 +724,6 @@ export default function VideoPage() {
 						<div className="hidden md:block">
 							<CustomDropdown
 								options={["Auto", ...resolutionList]}
-								// -- 3. Update the selected option's display text --
 								selectedOption={
 									resolution === "Auto" && currentAutoResolution
 										? `Auto (${currentAutoResolution})`
@@ -787,7 +731,6 @@ export default function VideoPage() {
 								}
 								onSelect={(res) => {
 									if (res !== resolution) {
-										// Immediately reflect manual choice for better UX
 										if (res !== "Auto") {
 											setCurrentAutoResolution(res);
 										}

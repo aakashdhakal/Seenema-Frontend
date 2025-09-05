@@ -11,7 +11,7 @@ function getCurrentBufferLevel(videoElement) {
 		return 0;
 	}
 	const currentTime = videoElement.currentTime;
-	// Find the buffer range that contains the current time
+
 	for (let i = 0; i < videoElement.buffered.length; i++) {
 		if (
 			videoElement.buffered.start(i) <= currentTime &&

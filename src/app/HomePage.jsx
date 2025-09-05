@@ -16,18 +16,15 @@ import Navbar from "@/components/combinedComponents/Navbar";
 import Footer from "@/components/combinedComponents/Footer";
 
 export default function HomePage() {
-	// ===== AUTH & ROUTING STATE =====
 	const { user, isLoading } = useAuthContext();
 	const router = useRouter();
 
-	// ===== COMPONENT STATE =====
 	const [userData, setUserData] = useState(null);
 	const [mounted, setMounted] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [addWatchListLoading, setAddWatchListLoading] = useState(false);
 	const [error, setError] = useState(null);
 
-	// ===== HOME DATA STATE (from single API call) =====
 	const [homeData, setHomeData] = useState({
 		featured: null,
 		trending: [],
@@ -37,8 +34,6 @@ export default function HomePage() {
 		continueWatching: [],
 		recommended: [],
 	});
-
-	// ===== UTILITY FUNCTIONS =====
 
 	const formatDuration = (seconds) => {
 		if (!seconds) return "Unknown";
@@ -117,8 +112,6 @@ export default function HomePage() {
 		exists_in_watchlist: featured.exists_in_watchlist || false,
 	});
 
-	// ===== EVENT HANDLERS =====
-
 	const handleVideoClick = (video) => {
 		router.push(`/video/${video.slug}`);
 	};
@@ -174,8 +167,6 @@ export default function HomePage() {
 		}
 	};
 
-	// ===== EFFECTS =====
-
 	/**
 	 * Handle component mounting for hydration
 	 */
@@ -227,10 +218,6 @@ export default function HomePage() {
 		}
 	}, [user, isLoading, router]);
 
-	/**
-	 * Fetch all home page data in a single API call
-	 * This is the main optimization - reduces from 7 API calls to 1
-	 */
 	useEffect(() => {
 		const fetchHomeData = async () => {
 			if (!user) return;
@@ -239,11 +226,9 @@ export default function HomePage() {
 				setLoading(true);
 				setError(null);
 
-				// Single API call to get all home page data
 				const response = await axios.get("/video/home");
 				const data = response.data;
 
-				// Transform and set all data
 				setHomeData({
 					featured: data.featured ? transformFeaturedData(data.featured) : null,
 					trending: data.trending.map(transformVideoData),
@@ -265,8 +250,6 @@ export default function HomePage() {
 
 		fetchHomeData();
 	}, [user]);
-
-	// ===== LOADING & ERROR STATES =====
 
 	if (isLoading || !user || !mounted || loading) {
 		return <PageLoadingComponent />;
@@ -296,8 +279,6 @@ export default function HomePage() {
 	if (!homeData.featured) {
 		return <PageLoadingComponent />;
 	}
-
-	// ===== MAIN RENDER =====
 
 	return (
 		<div className="min-h-screen bg-background">
