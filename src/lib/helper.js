@@ -185,12 +185,32 @@ export function parseVTT(vttText) {
 				text: "",
 			};
 		} else if (currentCue && line.trim()) {
-			currentCue.text += line + "\n";
+			let cleanLine = line;
+
+			// Decode common HTML entities
+			cleanLine = cleanLine
+				.replace(/&amp;/g, "&")
+				.replace(/&lt;/g, "<")
+				.replace(/&gt;/g, ">")
+				.replace(/&quot;/g, '"')
+				.replace(/&apos;/g, "'")
+				.replace(/&#39;/g, "'")
+				.replace(/&#x27;/g, "'")
+				.replace(/&nbsp;/g, " ");
+
+			// Strip VTT formatting tags
+			cleanLine = cleanLine.replace(/<[^>]*>/g, "");
+
+			currentCue.text += cleanLine + "\n";
 		} else if (!line.trim() && currentCue) {
 			cues.push(currentCue);
 			currentCue = null;
 		}
 	});
+
+	if (currentCue) {
+		cues.push(currentCue);
+	}
 
 	return cues;
 }

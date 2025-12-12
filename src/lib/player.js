@@ -287,15 +287,23 @@ async function startMainPlayback(
 			console.warn("endOfStream error:", e);
 		}
 
-		// Synthetic ended event fallback if native doesn't fire.
+		// Robust fallback to ensure the video ends
 		setTimeout(() => {
-			if (!videoElement.ended) {
-				const diff = (videoElement.duration || 0) - videoElement.currentTime;
-				if (diff < 0.7) {
+			if (videoElement && !videoElement.ended) {
+				const duration = videoElement.duration || 0;
+				const currentTime = videoElement.currentTime;
+				const diff = duration - currentTime;
+
+				// If we are within 1.5 seconds of the end, force it
+				if (diff < 1.5) {
+					// 1. Force time to end
+					videoElement.currentTime = duration;
+
+					// 2. Dispatch synthetic ended event immediately
 					videoElement.dispatchEvent(new Event("ended"));
 				}
 			}
-		}, 600);
+		}, 250);
 	}
 
 	async function selectOptimalResolution(segment, isUrgent = false) {

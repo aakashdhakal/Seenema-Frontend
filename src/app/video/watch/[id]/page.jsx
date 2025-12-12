@@ -41,6 +41,7 @@ export default function VideoPage() {
 
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [isMuted, setIsMuted] = useState(true);
+	const [hasUserInteracted, setHasUserInteracted] = useState(false);
 	const [volume, setVolume] = useState(100);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [duration, setDuration] = useState(0);
@@ -217,41 +218,17 @@ export default function VideoPage() {
 	 * Effect to apply subtitles to video element with time adjustment
 	 * Adds 8-second delay to account for intro duration
 	 */
+	/**
+	 * Effect to ensure native subtitles are disabled (we use custom overlay)
+	 */
 	useEffect(() => {
-		if (!videoRef.current || subtitles.length === 0) return;
-
-		const video = videoRef.current;
-		const INTRO_DURATION = 8;
-
-		Array.from(video.textTracks).forEach((track) => {
-			if (track.kind === "subtitles") {
+		if (videoRef.current) {
+			// Disable any native text tracks if they exist
+			Array.from(videoRef.current.textTracks).forEach((track) => {
 				track.mode = "disabled";
-				while (track.cues && track.cues.length > 0) {
-					track.removeCue(track.cues[0]);
-				}
-			}
-		});
-
-		Array.from(video.querySelectorAll("track")).forEach((el) => el.remove());
-
-		const track = video.addTextTrack("subtitles", "Seenema Subtitles", "en");
-		track.mode = showCaptions ? "showing" : "hidden";
-
-		subtitles.forEach((cue) => {
-			const adjustedStart = Math.max(0, cue.startTime + INTRO_DURATION);
-			const adjustedEnd = cue.endTime + INTRO_DURATION;
-			if (adjustedStart !== adjustedEnd) {
-				track.addCue(new VTTCue(adjustedStart, adjustedEnd, cue.text));
-			}
-		});
-
-		return () => {
-			track.mode = "disabled";
-			while (track.cues && track.cues.length > 0) {
-				track.removeCue(track.cues[0]);
-			}
-		};
-	}, [subtitles, showCaptions, videoId, resolution]);
+			});
+		}
+	}, [videoId, subtitles]);
 
 	/**
 	 * Effect for keyboard shortcuts and hotkeys
@@ -376,6 +353,18 @@ export default function VideoPage() {
 	const togglePlayPause = () => {
 		const video = videoRef.current;
 		if (!video) return;
+
+		// Auto-unmute on first play (user interaction)
+		if (!hasUserInteracted && !isPlaying) {
+			setHasUserInteracted(true);
+			// Try to remember user preference from localStorage
+			const savedMutePreference = localStorage.getItem("videoMuted");
+			if (savedMutePreference === "false") {
+				video.muted = false;
+				setIsMuted(false);
+			}
+		}
+
 		if (isPlaying) video.pause();
 		else video.play();
 	};
@@ -386,7 +375,10 @@ export default function VideoPage() {
 	const toggleMute = () => {
 		const video = videoRef.current;
 		if (!video) return;
-		video.muted = !video.muted;
+		const newMutedState = !video.muted;
+		video.muted = newMutedState;
+		// Save preference to localStorage
+		localStorage.setItem("videoMuted", String(newMutedState));
 	};
 
 	/**
@@ -469,19 +461,11 @@ export default function VideoPage() {
 	/**
 	 * Toggle captions visibility
 	 */
+	/**
+	 * Toggle captions visibility
+	 */
 	const toggleCaptions = () => {
-		setShowCaptions((prev) => {
-			const newState = !prev;
-
-			if (videoRef.current) {
-				Array.from(videoRef.current.textTracks).forEach((track) => {
-					if (track.kind === "subtitles") {
-						track.mode = newState ? "showing" : "hidden";
-					}
-				});
-			}
-			return newState;
-		});
+		setShowCaptions((prev) => !prev);
 	};
 
 	const progressPercentage = duration
@@ -508,7 +492,17 @@ export default function VideoPage() {
 				}}
 				onDurationChange={() => setDuration(videoRef.current?.duration || 0)}
 				onProgress={updateBufferInfo}
-				onPlay={() => setIsPlaying(true)}
+				onPlay={() => {
+					setIsPlaying(true);
+					// Auto-unmute on first play if user prefers
+					if (!hasUserInteracted) {
+						setHasUserInteracted(true);
+						const savedMutePreference = localStorage.getItem("videoMuted");
+						if (savedMutePreference === "false" && videoRef.current) {
+							videoRef.current.muted = false;
+						}
+					}
+				}}
 				onPause={() => {
 					setIsPlaying(false);
 					updateWatchHistory(videoId, currentTime);
@@ -564,6 +558,9 @@ export default function VideoPage() {
 			{/* ============================================================================ */}
 			{/* PLAY/PAUSE CENTER BUTTON */}
 			{/* ============================================================================ */}
+			{/* ============================================================================ */}
+			{/* PLAY/PAUSE CENTER BUTTON */}
+			{/* ============================================================================ */}
 			<div
 				className="absolute inset-0 flex items-center justify-center cursor-pointer"
 				onClick={togglePlayPause}>
@@ -576,6 +573,40 @@ export default function VideoPage() {
 					</div>
 				)}
 			</div>
+
+			{/* ============================================================================ */}
+			{/* CUSTOM SUBTITLES OVERLAY */}
+			{/* ============================================================================ */}
+			{showCaptions && subtitles.length > 0 && (
+				<div
+					className={`absolute left-0 right-0 text-center px-4 transition-all duration-300 pointer-events-none z-20 ${
+						showControls ? "bottom-20 xs:bottom-24 sm:bottom-28" : "bottom-8"
+					}`}>
+					{(() => {
+						const INTRO_DURATION = 8;
+						const activeCue = subtitles.find((cue) => {
+							const start = cue.startTime + INTRO_DURATION;
+							const end = cue.endTime + INTRO_DURATION;
+							return currentTime >= start && currentTime <= end;
+						});
+
+						if (!activeCue) return null;
+
+						return (
+							<div className="inline-block bg-black/60 px-3 py-1.5 rounded-lg backdrop-blur-sm">
+								<p className="text-white text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl font-medium leading-tight">
+									{/* Handle multi-line subtitles properly */}
+									{activeCue.text.split("\n").map((line, index) => (
+										<span key={index} className="block">
+											{line}
+										</span>
+									))}
+								</p>
+							</div>
+						);
+					})()}
+				</div>
+			)}
 
 			{/* ============================================================================ */}
 			{/* VIDEO CONTROLS */}
@@ -773,7 +804,17 @@ export default function VideoPage() {
 			{/* ============================================================================ */}
 			{videoData.title && showControls && (
 				<div className="absolute top-2 xs:top-3 sm:top-4 left-2 xs:left-3 sm:left-4 right-2 xs:right-3 sm:right-4 pointer-events-none z-10">
-					<div className="bg-black/40 backdrop-blur-sm rounded-lg p-2 xs:p-3 sm:p-4 max-w-max overflow-hidden">
+					<div className="bg-black/40 backdrop-blur-sm rounded-lg p-2 xs:p-3 sm:p-4 max-w-max overflow-hidden flex items-center gap-2 pointer-events-auto">
+						<Button
+							variant="ghost"
+							size="icon"
+							className="text-white hover:text-primary hover:bg-white/20 h-auto w-auto p-1 rounded-full shrink-0"
+							onClick={() => router.back()}>
+							<Icon
+								icon="solar:arrow-left-linear"
+								className="w-5 h-5 xs:w-6 xs:h-6 sm:w-7 sm:h-7"
+							/>
+						</Button>
 						<h1 className="text-white text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl font-bold truncate">
 							{videoData.title}
 							{videoData.release_year && (
