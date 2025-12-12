@@ -9,17 +9,47 @@ const nextConfig = {
 		];
 	},
 	images: {
-		domains: [
-			"localhost",
-			"image.tmdb.org",
-			"www.themoviedb.org",
-			"i.imgur.com",
-			"avatars.githubusercontent.com",
-			"lh3.googleusercontent.com",
-			"res.cloudinary.com",
-			"seenemaapi.aakashdhakal.com.np",
-			"seenema.aakashdhakal.com.np",
-			"ui-avatars.com",
+		remotePatterns: [
+			{
+				protocol: "http",
+				hostname: "localhost",
+			},
+			{
+				protocol: "https",
+				hostname: "image.tmdb.org",
+			},
+			{
+				protocol: "https",
+				hostname: "www.themoviedb.org",
+			},
+			{
+				protocol: "https",
+				hostname: "i.imgur.com",
+			},
+			{
+				protocol: "https",
+				hostname: "avatars.githubusercontent.com",
+			},
+			{
+				protocol: "https",
+				hostname: "lh3.googleusercontent.com",
+			},
+			{
+				protocol: "https",
+				hostname: "res.cloudinary.com",
+			},
+			{
+				protocol: "https",
+				hostname: "seenemaapi.aakashdhakal.com.np",
+			},
+			{
+				protocol: "https",
+				hostname: "seenema.aakashdhakal.com.np",
+			},
+			{
+				protocol: "https",
+				hostname: "ui-avatars.com",
+			},
 		],
 	},
 };
